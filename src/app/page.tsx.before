@@ -5,7 +5,6 @@ export default function Home() {
   return (
     <section className="relative min-h-[calc(100vh-64px)]">
       {/* Imagen de fondo */}
-      <div className="absolute inset-0 -z-10" style={{ backgroundImage: "url(/Salon.png)", backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" }} />
       {/* Degradado claro en la parte superior para legibilidad del texto oscuro */}
       <div className="absolute inset-0 bg-gradient-to-b from-white/80 to-transparent pointer-events-none" />
 
