@@ -16,7 +16,7 @@ const baseLinks = [
   { href: "/tareas", label: "🛠️ Tareas" },
   { href: "/plan-semanal", label: "📅 Plan semanal" },
   { href: "/usuarios", label: "👥 Usuarios" },
-  { href: "/fotos", label: "📷 Fotos" },
+  { href: "/proyectos", label: "📁 Proyectos" },
   { href: "/actividad", label: "📰 Actividad" },
 ];
 
@@ -41,13 +41,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       <aside
         id="app-sidebar"
         className={
-          "fixed z-[1001] top-0 left-0 h-screen w-72 bg-neutral-100 border-r border-neutral-300 shadow-xl transform transition-transform " +
+          "fixed z-[1001] top-0 left-0 h-screen w-72 bg-[color:var(--surface)] border-r border-[color:var(--border)] shadow-xl transform transition-transform " +
           (open ? "translate-x-0" : "-translate-x-full")
         }
         aria-label="Sidebar"
       >
         <div className="h-full flex flex-col">
-          <div className="h-14 flex items-center px-4 border-b border-neutral-300 font-semibold text-neutral-800">Mantenimiento SR</div>
+          <div className="h-14 flex items-center px-4 border-b border-[color:var(--border)] font-semibold text-white">Mantenimiento SR</div>
           <nav className="p-2 overflow-y-auto overscroll-contain flex-1">
             <ul className="space-y-1">
               {baseLinks.map((l) => {
@@ -59,8 +59,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                       className={
                         "flex items-center gap-2 px-3 py-2 rounded text-sm " +
                         (active
-                          ? "bg-neutral-800 text-white"
-                          : "text-neutral-800 hover:bg-neutral-200")
+                          ? "bg-white/10 text-white"
+                          : "text-[color:var(--foreground)]/90 hover:bg-white/5")
                       }
                       onClick={onClose}
                     >
@@ -71,9 +71,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               })}
             </ul>
           </nav>
-          <div className="p-3 border-t border-neutral-300 bg-neutral-100">
+          <div className="p-3 border-t border-[color:var(--border)] bg-[color:var(--surface)]">
             <button
-              className="w-full px-3 py-2 rounded border border-neutral-300 text-neutral-800 hover:bg-neutral-200"
+              className="w-full btn btn-ghost"
               onClick={() => {
                 onClose();
                 signOut({ callbackUrl: "/" });

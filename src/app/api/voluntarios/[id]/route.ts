@@ -13,9 +13,49 @@ const patchSchema = z.object({
   trabajo_altura: z.boolean().optional(),
 });
 
+export async function GET(
+  _req: Request,
+  ctx: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await ctx.params;
+
+  try {
+    if (process.env.MONGODB_URI) {
+      await connectMongo();
+      const { default: Volunteer } = await import("@/models/Volunteer");
+      const doc: any = await Volunteer.findById(id).lean();
+      if (!doc) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+      return NextResponse.json({
+        id: String(doc._id),
+        shortId: doc.shortId || null,
+        nombre: doc.nombre,
+        apellido: doc.apellido,
+        telefono: doc.telefono ?? null,
+        congregacion: doc.congregacion ?? null,
+        a2: !!doc.a2,
+        trabajo_altura: !!doc.trabajo_altura,
+        createdAt: doc.createdAt,
+      });
+    }
+
+    const row = db
+      .prepare(
+        "SELECT id, short_id as shortId, nombre, apellido, telefono, congregacion, a2, trabajo_altura, datetime(created_at) as createdAt FROM volunteers WHERE id = ?"
+      )
+      .get(id);
+    if (!row) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+    return NextResponse.json(row);
+  } catch (e: any) {
+    return NextResponse.json({ error: "Error consultando" }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  ctx: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -23,17 +63,18 @@ export async function PATCH(
   const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
 
-  const updates = parsed.data;
-  const { id } = params;
+  const updates = parsed.data as any;
+  const { id } = await ctx.params;
 
   try {
     if (process.env.MONGODB_URI) {
       await connectMongo();
       const { default: Volunteer } = await import("@/models/Volunteer");
-      const doc = await Volunteer.findByIdAndUpdate(id, updates, { new: true });
+      const doc: any = await Volunteer.findByIdAndUpdate(id, updates, { new: true });
       if (!doc) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
       return NextResponse.json({
         id: String(doc._id),
+        shortId: doc.shortId || null,
         nombre: doc.nombre,
         apellido: doc.apellido,
         telefono: doc.telefono ?? null,
@@ -43,7 +84,6 @@ export async function PATCH(
         createdAt: doc.createdAt,
       });
     } else {
-      // apply individual updates
       const run = (sql: string, val: any) => db.prepare(sql).run(val, id);
       if (updates.nombre !== undefined) run("UPDATE volunteers SET nombre = ? WHERE id = ?", updates.nombre);
       if (updates.apellido !== undefined) run("UPDATE volunteers SET apellido = ? WHERE id = ?", updates.apellido);
@@ -53,7 +93,7 @@ export async function PATCH(
       if (updates.trabajo_altura !== undefined) run("UPDATE volunteers SET trabajo_altura = ? WHERE id = ?", updates.trabajo_altura ? 1 : 0);
       const row = db
         .prepare(
-          "SELECT id, nombre, apellido, telefono, congregacion, a2, trabajo_altura, datetime(created_at) as createdAt FROM volunteers WHERE id = ?"
+          "SELECT id, short_id as shortId, nombre, apellido, telefono, congregacion, a2, trabajo_altura, datetime(created_at) as createdAt FROM volunteers WHERE id = ?"
         )
         .get(id);
       if (!row) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
@@ -66,7 +106,7 @@ export async function PATCH(
 
 export async function DELETE(
   _req: Request,
-  { params }: { params: { id: string } }
+  ctx: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
   // Solo ADMIN o COORDINADOR pueden eliminar
@@ -76,7 +116,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { id } = params;
+  const { id } = await ctx.params;
 
   try {
     if (process.env.MONGODB_URI) {

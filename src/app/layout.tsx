@@ -26,11 +26,13 @@ export default async function RootLayout({
   const session = await auth();
   return (
     <html lang="es">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-neutral-100 text-neutral-900`}>
-        <Providers session={session}>
-          <Navbar />
-          <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
-        </Providers>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <div className="app-bg min-h-screen">
+          <Providers session={session}>
+            <Navbar />
+            <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
+          </Providers>
+        </div>
       </body>
     </html>
   );

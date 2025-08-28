@@ -1,8 +1,18 @@
 "use client";
 import useSWR from "swr";
 import { useState } from "react";
+import { PencilSquareIcon, TrashIcon, PlusCircleIcon } from "@heroicons/react/24/outline";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+// ID corto estable (100-999) derivado del id real
+function shortId(input?: string) {
+  const s = String(input || "");
+  let h = 0 >>> 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  const code = 100 + (h % 900);
+  return String(code);
+}
 
 export default function VoluntariosPage() {
   const { data, mutate } = useSWR("/api/voluntarios", fetcher);
@@ -14,6 +24,8 @@ export default function VoluntariosPage() {
     a2: false,
     trabajo_altura: false,
   });
+  const [showCreate, setShowCreate] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<any>({});
 
@@ -26,6 +38,7 @@ export default function VoluntariosPage() {
     });
     if (res.ok) {
       setForm({ nombre: "", apellido: "", telefono: "", congregacion: "", a2: false, trabajo_altura: false });
+      setShowCreate(false);
       mutate();
     }
   }
@@ -40,16 +53,20 @@ export default function VoluntariosPage() {
       a2: !!v.a2,
       trabajo_altura: !!v.trabajo_altura,
     });
+    setShowEdit(true);
   }
 
-  async function saveEdit(id: string) {
-    await fetch(`/api/voluntarios/${id}`, {
+  async function saveEdit(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (!editing) return;
+    await fetch(`/api/voluntarios/${editing}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(editForm),
     });
     setEditing(null);
     setEditForm({});
+    setShowEdit(false);
     mutate();
   }
 
@@ -60,46 +77,172 @@ export default function VoluntariosPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
-      <h1 className="text-2xl font-bold">Voluntarios</h1>
+    <div className="max-w-6xl mx-auto p-6 space-y-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Voluntarios</h1>
+        <button
+          className="inline-flex items-center gap-2 px-3 py-2 rounded bg-foreground text-background"
+          onClick={() => setShowCreate(true)}
+          aria-label="Nuevo voluntario"
+        >
+          <PlusCircleIcon className="h-5 w-5" />
+          <span>Nuevo</span>
+        </button>
+      </div>
 
-      <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="block text-sm mb-1">Nombre</label>
-          <input className="w-full border rounded px-3 py-2" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
+      {/* Create Modal */}
+      {showCreate && (
+        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setShowCreate(false)} />
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="card w-[95vw] max-w-3xl max-h-[85vh] overflow-auto">
+              <div className="px-4 py-3 card-header flex items-center gap-2">
+                <div className="font-semibold">Nuevo voluntario</div>
+                <button className="ml-auto btn btn-ghost" onClick={() => setShowCreate(false)}>Cerrar</button>
+              </div>
+              <form onSubmit={submit} className="p-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm mb-1">Nombre</label>
+                  <input
+                    className="w-full input"
+                    value={form.nombre}
+                    onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Apellido</label>
+                  <input
+                    className="w-full input"
+                    value={form.apellido}
+                    onChange={(e) => setForm({ ...form, apellido: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Teléfono</label>
+                  <input
+                    className="w-full input"
+                    value={form.telefono}
+                    onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Congregación</label>
+                  <input
+                    className="w-full input"
+                    value={form.congregacion}
+                    onChange={(e) => setForm({ ...form, congregacion: e.target.value })}
+                  />
+                </div>
+                <div className="sm:col-span-2 flex items-center gap-6 pt-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={form.a2}
+                      onChange={(e) => setForm({ ...form, a2: e.target.checked })}
+                    />
+                    A2 lleno
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={form.trabajo_altura}
+                      onChange={(e) => setForm({ ...form, trabajo_altura: e.target.checked })}
+                    />
+                    Trabajo en altura
+                  </label>
+                </div>
+                <div className="sm:col-span-2 flex items-center gap-3 pt-2 justify-end">
+                  <button type="button" className="btn" onClick={() => setShowCreate(false)}>Cancelar</button>
+                  <button type="submit" className="btn btn-primary">Guardar</button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
-        <div>
-          <label className="block text-sm mb-1">Apellido</label>
-          <input className="w-full border rounded px-3 py-2" value={form.apellido} onChange={(e) => setForm({ ...form, apellido: e.target.value })} required />
-        </div>
-        <div>
-          <label className="block text-sm mb-1">Teléfono</label>
-          <input className="w-full border rounded px-3 py-2" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} />
-        </div>
-        <div>
-          <label className="block text-sm mb-1">Congregación</label>
-          <input className="w-full border rounded px-3 py-2" value={form.congregacion} onChange={(e) => setForm({ ...form, congregacion: e.target.value })} />
-        </div>
-        <div className="sm:col-span-2 flex items-center gap-6">
-          <label className="flex items-center gap-2">
-            <input type="checkbox" checked={form.a2} onChange={(e) => setForm({ ...form, a2: e.target.checked })} />
-            A2 lleno
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" checked={form.trabajo_altura} onChange={(e) => setForm({ ...form, trabajo_altura: e.target.checked })} />
-            Trabajo en altura
-          </label>
-        </div>
-        <div className="sm:col-span-2">
-          <button className="px-4 py-2 rounded bg-foreground text-background">Guardar</button>
-        </div>
-      </form>
+      )}
 
+      {/* Edit Modal */}
+      {showEdit && (
+        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
+          <div className="absolute inset-0 bg-black/60" onClick={() => { setShowEdit(false); setEditing(null); }} />
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="card w-[95vw] max-w-3xl max-h-[85vh] overflow-auto">
+              <div className="px-4 py-3 card-header flex items-center gap-2">
+                <div className="font-semibold">Editar voluntario</div>
+                <button className="ml-auto btn btn-ghost" onClick={() => { setShowEdit(false); setEditing(null); }}>Cerrar</button>
+              </div>
+              <form onSubmit={saveEdit} className="p-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm mb-1">Nombre</label>
+                  <input
+                    className="w-full input"
+                    value={editForm.nombre || ""}
+                    onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Apellido</label>
+                  <input
+                    className="w-full input"
+                    value={editForm.apellido || ""}
+                    onChange={(e) => setEditForm({ ...editForm, apellido: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Teléfono</label>
+                  <input
+                    className="w-full input"
+                    value={editForm.telefono || ""}
+                    onChange={(e) => setEditForm({ ...editForm, telefono: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Congregación</label>
+                  <input
+                    className="w-full input"
+                    value={editForm.congregacion || ""}
+                    onChange={(e) => setEditForm({ ...editForm, congregacion: e.target.value })}
+                  />
+                </div>
+                <div className="sm:col-span-2 flex items-center gap-6 pt-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={!!editForm.a2}
+                      onChange={(e) => setEditForm({ ...editForm, a2: e.target.checked })}
+                    />
+                    A2 lleno
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={!!editForm.trabajo_altura}
+                      onChange={(e) => setEditForm({ ...editForm, trabajo_altura: e.target.checked })}
+                    />
+                    Trabajo en altura
+                  </label>
+                </div>
+                <div className="sm:col-span-2 flex items-center gap-3 pt-2 justify-end">
+                  <button type="button" className="btn" onClick={() => { setShowEdit(false); setEditing(null); }}>Cancelar</button>
+                  <button type="submit" className="btn btn-primary">Guardar</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Listado */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left border-b">
               <th className="py-2">Nombre</th>
+              <th>ID</th>
               <th>Teléfono</th>
               <th>Congregación</th>
               <th>A2</th>
@@ -109,57 +252,36 @@ export default function VoluntariosPage() {
           </thead>
           <tbody>
             {(data ?? []).map((v: any) => (
-              <tr key={v.id} className="border-b">
+              <tr key={v.id || v._id} className="border-b">
                 <td className="py-2">
-                  {editing === v.id ? (
-                    <div className="grid sm:grid-cols-2 gap-2">
-                      <input className="border rounded px-2 py-1" value={editForm.nombre || ""} onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })} />
-                      <input className="border rounded px-2 py-1" value={editForm.apellido || ""} onChange={(e) => setEditForm({ ...editForm, apellido: e.target.value })} />
-                    </div>
-                  ) : (
-                    <span>{v.nombre} {v.apellido}</span>
-                  )}
+                  <span>{v.nombre} {v.apellido}</span>
                 </td>
-                <td>
-                  {editing === v.id ? (
-                    <input className="border rounded px-2 py-1" value={editForm.telefono || ""} onChange={(e) => setEditForm({ ...editForm, telefono: e.target.value })} />
-                  ) : (
-                    v.telefono || "—"
-                  )}
+                <td className="whitespace-nowrap">
+                  <div className="flex items-center gap-2" title={String(v.id || v._id)}>
+                    <code className="text-xs font-mono text-neutral-700 bg-neutral-100 px-1.5 py-0.5 rounded">{v.shortId || shortId(v.id || v._id)}</code>
+                  </div>
                 </td>
-                <td>
-                  {editing === v.id ? (
-                    <input className="border rounded px-2 py-1" value={editForm.congregacion || ""} onChange={(e) => setEditForm({ ...editForm, congregacion: e.target.value })} />
-                  ) : (
-                    v.congregacion || "—"
-                  )}
-                </td>
-                <td>
-                  {editing === v.id ? (
-                    <input type="checkbox" checked={!!editForm.a2} onChange={(e) => setEditForm({ ...editForm, a2: e.target.checked })} />
-                  ) : (
-                    v.a2 ? "Sí" : "No"
-                  )}
-                </td>
-                <td>
-                  {editing === v.id ? (
-                    <input type="checkbox" checked={!!editForm.trabajo_altura} onChange={(e) => setEditForm({ ...editForm, trabajo_altura: e.target.checked })} />
-                  ) : (
-                    v.trabajo_altura ? "Sí" : "No"
-                  )}
-                </td>
+                <td>{v.telefono || "—"}</td>
+                <td>{v.congregacion || "—"}</td>
+                <td>{v.a2 ? "Sí" : "No"}</td>
+                <td>{v.trabajo_altura ? "Sí" : "No"}</td>
                 <td className="text-right whitespace-nowrap py-2">
-                  {editing === v.id ? (
-                    <>
-                      <button className="px-2 py-1 mr-2 border rounded" onClick={() => saveEdit(v.id)}>Guardar</button>
-                      <button className="px-2 py-1 border rounded" onClick={() => { setEditing(null); setEditForm({}); }}>Cancelar</button>
-                    </>
-                  ) : (
-                    <>
-                      <button className="px-2 py-1 mr-2 border rounded" onClick={() => startEdit(v)}>Editar</button>
-                      <button className="px-2 py-1 border rounded" onClick={() => del(v.id)}>Eliminar</button>
-                    </>
-                  )}
+                  <button
+                    className="p-1 mr-2 border rounded inline-flex items-center justify-center hover:bg-muted"
+                    onClick={() => startEdit(v)}
+                    title="Editar"
+                    aria-label="Editar"
+                  >
+                    <PencilSquareIcon className="h-5 w-5" />
+                  </button>
+                  <button
+                    className="p-1 border rounded inline-flex items-center justify-center hover:bg-red-50 text-red-600"
+                    onClick={() => del(v.id)}
+                    title="Eliminar"
+                    aria-label="Eliminar"
+                  >
+                    <TrashIcon className="h-5 w-5" />
+                  </button>
                 </td>
               </tr>
             ))}

@@ -6,13 +6,16 @@ import { authOptions, role as RoleEnum } from "@/lib/auth";
 export const runtime = "nodejs";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: { id: string } }
 ) {
   const _id = toObjectId(params.id);
   if (!_id) return NextResponse.json({ error: "id inválido" }, { status: 400 });
 
-  const bucket = await getGridFSBucket();
+  const url = new URL(req.url);
+  const thumb = url.searchParams.get("thumb") === "1";
+
+  const bucket = await getGridFSBucket(thumb ? "uploads_thumb" : "uploads");
 
   const files = await bucket.find({ _id }).toArray();
   if (!files || files.length === 0) return NextResponse.json({ error: "No encontrado" }, { status: 404 });

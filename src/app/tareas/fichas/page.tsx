@@ -1,7 +1,9 @@
 "use client";
 import useSWR from "swr";
 import React from "react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
+import Link from "next/link";
+import { PencilSquareIcon, PhotoIcon, PaperClipIcon, ListBulletIcon, HashtagIcon, CheckCircleIcon, ArrowsRightLeftIcon, CodeBracketIcon, PlusCircleIcon, TrashIcon } from "@heroicons/react/24/outline";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -24,22 +26,42 @@ type Ficha = {
 
 type ApiResp = { items: Ficha[]; total: number; page: number; pageSize: number };
 
+type RichEditorProps = {
+  value: string;
+  onChange: (html: string) => void;
+  onAttach?: (id: string, url: string, name: string) => void;
+  original?: string; // Para modo diff
+};
 
-
-function RichTextEditor({ value, onChange, onAttach }: { value: string; onChange: (html: string)=>void; onAttach?: (id: string, url: string, name: string)=>void }) {
+function RichTextEditor({ value, onChange, onAttach, original = "" }: RichEditorProps) {
   const ref = React.useRef<HTMLDivElement | null>(null);
   const imgInput = React.useRef<HTMLInputElement | null>(null);
   const fileInput = React.useRef<HTMLInputElement | null>(null);
+  const [mode, setMode] = useState<"rich" | "source" | "diff">("rich");
+  const [sourceText, setSourceText] = useState<string>(value || "");
+
+  useEffect(() => {
+    if (mode !== "source") setSourceText(value || "");
+  }, [value, mode]);
+
   function exec(command: string) {
     document.execCommand(command, false);
     if (ref.current) onChange(ref.current.innerHTML);
   }
-  function onInput() { if (ref.current) onChange(ref.current.innerHTML); }
+  function onInput() {
+    if (ref.current) onChange(ref.current.innerHTML);
+  }
   function insertHtml(html: string) {
     const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) { if (ref.current) { ref.current.insertAdjacentHTML('beforeend', html); } return; }
+    if (!sel || sel.rangeCount === 0) {
+      if (ref.current) {
+        ref.current.insertAdjacentHTML("beforeend", html);
+        onChange(ref.current.innerHTML);
+      }
+      return;
+    }
     const range = sel.getRangeAt(0);
-    const el = document.createElement('div');
+    const el = document.createElement("div");
     el.innerHTML = html;
     const frag = document.createDocumentFragment();
     while (el.firstChild) frag.appendChild(el.firstChild);
@@ -52,15 +74,15 @@ function RichTextEditor({ value, onChange, onAttach }: { value: string; onChange
     if (!file) return;
     try {
       const fd = new FormData();
-      fd.append('file', file);
-      const res = await fetch('/api/uploads', { method: 'POST', body: fd });
+      fd.append("file", file);
+      const res = await fetch("/api/uploads", { method: "POST", body: fd });
       const j = await res.json();
       if (j?.id) {
         const url = `/api/images/${j.id}`;
         insertHtml(`<img src="${url}" alt="" style="max-width:100%; height:auto;" />`);
       }
     } finally {
-      if (imgInput.current) imgInput.current.value = '';
+      if (imgInput.current) imgInput.current.value = "";
     }
   }
   async function handleAttach(e: React.ChangeEvent<HTMLInputElement>) {
@@ -68,43 +90,110 @@ function RichTextEditor({ value, onChange, onAttach }: { value: string; onChange
     if (!file) return;
     try {
       const fd = new FormData();
-      fd.append('file', file);
-      const res = await fetch('/api/tareas/fichas/pdf', { method: 'POST', body: fd });
+      fd.append("file", file);
+      const res = await fetch("/api/tareas/fichas/pdf", { method: "POST", body: fd });
       const j = await res.json();
       if (j?.id) {
         const url = `/api/tareas/fichas/file/${j.id}`;
-        const name = (file as any).name || 'archivo';
+        const name = (file as any).name || "archivo";
         insertHtml(`<a href="${url}" target="_blank" rel="noreferrer">${name}</a>`);
         onAttach && onAttach(String(j.id), url, name);
       }
     } finally {
-      if (fileInput.current) fileInput.current.value = '';
+      if (fileInput.current) fileInput.current.value = "";
     }
   }
+  function insertChecklist() {
+    insertHtml('<ul class="task-list"><li><input type="checkbox"/> Nuevo ítem</li></ul>');
+  }
+  function switchMode(next: "rich" | "source" | "diff") {
+    if (mode === "source" && next !== "source") {
+      onChange(sourceText);
+      // Sincroniza el contenido editable
+      if (ref.current) ref.current.innerHTML = sourceText;
+    }
+    setMode(next);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+      const k = e.key.toLowerCase();
+      if (k === 'b') { e.preventDefault(); exec('bold'); }
+      else if (k === 'i') { e.preventDefault(); exec('italic'); }
+      else if (k === 'u') { e.preventDefault(); exec('underline'); }
+    }
+  }
+  function handleClick(e: React.MouseEvent<HTMLDivElement>) {
+    const t = e.target as HTMLElement;
+    if (t && (t as HTMLInputElement).type === 'checkbox') {
+      // Espera a que el DOM aplique el cambio del checkbox
+      setTimeout(() => { if (ref.current) onChange(ref.current.innerHTML); }, 0);
+    }
+  }
+
   return (
-    <div className="border rounded">
-      <div className="flex items-center gap-2 px-2 py-1 text-sm bg-neutral-100 border-b">
-        <button type="button" className="font-bold" onClick={()=>exec('bold')}>B</button>
-        <button type="button" className="italic" onClick={()=>exec('italic')}>I</button>
-        <button type="button" className="underline" onClick={()=>exec('underline')}>U</button>
+    <div className="border rounded bg-white">
+      <div className="flex items-center gap-2 px-3 py-2 text-sm bg-neutral-100 border-b rounded-t">
+        {/* Left group: basic formatting */}
+        <button type="button" title="Negrita (Cmd+B)" onClick={() => exec("bold")} className="font-bold">B</button>
+        <button type="button" title="Cursiva (Cmd+I)" onClick={() => exec("italic")} className="italic">I</button>
+        <button type="button" title="Subrayado (Cmd+U)" onClick={() => exec("underline")} className="underline">U</button>
         <span className="mx-1 h-5 w-px bg-neutral-300" />
-        <button type="button" onClick={()=>exec('insertUnorderedList')}>• Lista</button>
-        <button type="button" onClick={()=>exec('insertOrderedList')}>1. Lista</button>
-        <span className="mx-1 h-5 w-px bg-neutral-300" />
-        <button type="button" title="Insertar imagen" onClick={()=>imgInput.current?.click()}>🖼️</button>
+        <button type="button" title="Lista con viñetas" onClick={() => exec("insertUnorderedList")}><ListBulletIcon className="w-5 h-5" /></button>
+        <button type="button" title="Lista numerada" onClick={() => exec("insertOrderedList")}><HashtagIcon className="w-5 h-5" /></button>
+        <button type="button" title="Checklist" onClick={insertChecklist}><CheckCircleIcon className="w-5 h-5" /></button>
+        <span className="mx-1 h-5 w-px bg-neutral-300 ml-auto" />
+        {/* Right group: attachments */}
+        <button type="button" title="Insertar imagen" onClick={() => imgInput.current?.click()} className="border rounded px-2 py-1 bg-white"><PhotoIcon className="w-5 h-5" /></button>
         <input ref={imgInput} type="file" accept="image/*" className="hidden" onChange={handleImage} />
-        <button type="button" title="Adjuntar archivo (PDF/DOCX)" onClick={()=>fileInput.current?.click()}>📎</button>
+        <button type="button" title="Adjuntar archivo (PDF/DOCX)" onClick={() => fileInput.current?.click()} className="border rounded px-2 py-1 bg-white"><PaperClipIcon className="w-5 h-5" /></button>
         <input ref={fileInput} type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={handleAttach} />
+        <span className="mx-1 h-5 w-px bg-neutral-300" />
+        {/* Modes */}
+        <button type="button" title="Rich text" onClick={() => switchMode("rich")} className={`border rounded px-2 py-1 ${mode==='rich'?'bg-neutral-200':''}`}><ArrowsRightLeftIcon className="w-5 h-5" /></button>
+        <button type="button" title="Diff" onClick={() => switchMode("diff")} className={`border rounded px-2 py-1 ${mode==='diff'?'bg-neutral-200':''}`}>≠</button>
+        <button type="button" title="Source" onClick={() => switchMode("source")} className={`border rounded px-2 py-1 ${mode==='source'?'bg-neutral-200':''}`}><CodeBracketIcon className="w-5 h-5" /></button>
       </div>
-      <div ref={ref} className="min-h-[160px] p-3 outline-none" contentEditable onInput={onInput} dangerouslySetInnerHTML={{ __html: value || '' }} />
+      {mode === "rich" && (
+        <div
+          ref={ref}
+          className="min-h-[160px] p-3 outline-none"
+          contentEditable
+          onInput={onInput}
+          onKeyDown={handleKeyDown}
+          onClick={handleClick}
+          dangerouslySetInnerHTML={{ __html: value || "" }}
+        />
+      )}
+      {mode === "source" && (
+        <textarea
+          className="w-full min-h-[200px] p-3 outline-none bg-white"
+          value={sourceText}
+          onChange={(e) => setSourceText(e.target.value)}
+          onBlur={() => onChange(sourceText)}
+        />
+      )}
+      {mode === "diff" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-2 bg-neutral-50">
+          <div className="border rounded bg-white">
+            <div className="px-2 py-1 text-xs text-neutral-600 border-b">Antes</div>
+            <pre className="p-2 whitespace-pre-wrap text-xs">{original || ""}</pre>
+          </div>
+          <div className="border rounded bg-white">
+            <div className="px-2 py-1 text-xs text-neutral-600 border-b">Actual</div>
+            <pre className="p-2 whitespace-pre-wrap text-xs">{value || ""}</pre>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function FichasPage() {
-  const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
-  const [sort, setSort] = useState<'alpha'|'recent'>('alpha');
+  // Reemplazar estados de paginación por constantes
+  const page = 1;
+  const pageSize = 1000;
+  const sort: 'alpha' | 'recent' = 'alpha';
   const { data, mutate, isLoading } = useSWR<ApiResp>(`/api/tareas/fichas?page=${page}&pageSize=${pageSize}&sort=${sort}` , fetcher);
 
   // Filtros (cliente)
@@ -122,14 +211,10 @@ export default function FichasPage() {
     }
     if (fPrioridad !== "ALL") rows = rows.filter((r) => r.prioridad === fPrioridad);
     if (fEstado !== "ALL") rows = rows.filter((r) => r.estado === fEstado);
-      // Orden segun selector
-    if (sort === 'alpha') {
-      rows = rows.slice().sort((a,b)=> (a.titulo||'').localeCompare(b.titulo||'', 'es', {sensitivity:'base'}));
-    } else {
-      rows = rows.slice().sort((a,b)=> new Date(b.createdAt||0).getTime() - new Date(a.createdAt||0).getTime());
-    }
+    // Orden fijo alfabético
+    rows = rows.slice().sort((a,b)=> (a.titulo||'').localeCompare(b.titulo||'', 'es', {sensitivity:'base'}));
     return rows;
-  }, [data, q, fPrioridad, fEstado, sort]);
+  }, [data, q, fPrioridad, fEstado]);
 
   // Crear
   const [form, setForm] = useState({ titulo: "", descripcion: "", prioridad: "MEDIA", asignado_a: "", vencimiento: "", instrucciones: "", notas: "" } as any);
@@ -139,6 +224,7 @@ export default function FichasPage() {
   const [createPdfId, setCreatePdfId] = useState<string | null>(null);
   const [createPdfName, setCreatePdfName] = useState<string | null>(null);
   const [rtContent, setRtContent] = useState("");
+  const [rtNotesContent, setRtNotesContent] = useState("");
 
   async function createFicha(e: React.FormEvent) {
     e.preventDefault();
@@ -148,13 +234,12 @@ export default function FichasPage() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         titulo: form.titulo,
-        descripcion: form.descripcion || null,
-        prioridad: form.prioridad,
-        asignado_a: form.asignado_a || null,
-        vencimiento: form.vencimiento || null,
+        descripcion: null,
+        prioridad: "MEDIA",
+        asignado_a: null,
+        vencimiento: null,
         instrucciones: rtContent || null,
-        notas: form.notas || null,
-        checklist: checklistForm,
+        notas: rtNotesContent || null,
         ...(createPdfId ? { pdfId: createPdfId } : {}),
       }),
     });
@@ -162,6 +247,7 @@ export default function FichasPage() {
     setForm({ titulo: "", descripcion: "", prioridad: "MEDIA", asignado_a: "", vencimiento: "", instrucciones: "", notas: "" });
     setChecklistForm([]);
     setRtContent("");
+    setRtNotesContent("");
     setCreatePdfId(null);
     setCreatePdfName(null);
     setNewItem("");
@@ -222,12 +308,15 @@ export default function FichasPage() {
     setUploading(false);
   }
 
-  // Edición inline
+  // Edición en modal
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<any>({});
   const [editChecklist, setEditChecklist] = useState<ChecklistItem[]>([]);
   const [editNewItem, setEditNewItem] = useState("");
   const editFileRef = useRef<HTMLInputElement | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editRtContent, setEditRtContent] = useState("");
+  const [editNotesRtContent, setEditNotesRtContent] = useState("");
 
   function startEdit(f: Ficha) {
     setEditId(f.id);
@@ -240,9 +329,20 @@ export default function FichasPage() {
       vencimiento: f.vencimiento ? f.vencimiento.substring(0, 10) : "",
       instrucciones: f.instrucciones || "",
       notas: f.notas || "",
+      pdfId: f.pdfId ?? undefined,
     });
+    setEditRtContent(f.instrucciones || "");
+    setEditNotesRtContent(f.notas || "");
     setEditChecklist(Array.isArray(f.checklist) ? f.checklist : []);
+    setEditOpen(true);
   }
+
+  // Cerrar con ESC en modales
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') { if (editOpen) { setEditOpen(false); setEditId(null); } if (createOpen) setCreateOpen(false); } }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [editOpen]);
 
   async function saveEdit(id: string) {
     let nextPdfId = editForm.pdfId ?? undefined;
@@ -263,14 +363,15 @@ export default function FichasPage() {
         descripcion: editForm.descripcion || null,
         asignado_a: editForm.asignado_a || null,
         vencimiento: editForm.vencimiento || null,
-        instrucciones: editForm.instrucciones || null,
-        notas: editForm.notas || null,
+        instrucciones: editRtContent || null,
+        notas: editNotesRtContent || null,
         checklist: editChecklist,
         ...(nextPdfId !== undefined ? { pdfId: nextPdfId } : {}),
       }),
     });
     if (editFileRef.current) editFileRef.current.value = "";
     setEditId(null);
+    setEditOpen(false);
     mutate();
   }
 
@@ -318,62 +419,138 @@ export default function FichasPage() {
     setPreviewFicha(null);
   }
 
+  // Eliminar con confirmación
+  async function handleDeleteCurrent() {
+    if (!editId) return;
+    const ok = window.confirm("¿Seguro que deseas eliminar esta ficha?");
+    if (!ok) return;
+    await deleteFicha(editId);
+    setEditOpen(false);
+    setEditId(null);
+  }
+
   return (
     <section className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold">Fichas</h1>
-        <div className="flex flex-wrap gap-2 items-center">
-          <input className="border rounded px-2 py-1" placeholder="Buscar" value={q} onChange={(e)=>setQ(e.target.value)} />
-          <select className="border rounded px-2 py-1" value={fPrioridad} onChange={(e)=>setFPrioridad(e.target.value as any)}>
-            <option value="ALL">Todas las prioridades</option>
-            <option value="BAJA">Baja</option>
-            <option value="MEDIA">Media</option>
-            <option value="ALTA">Alta</option>
-          </select>
-          <select className="border rounded px-2 py-1" value={fEstado} onChange={(e)=>setFEstado(e.target.value as any)}>
-            <option value="ALL">Todos los estados</option>
-            <option value="ABIERTA">Abierta</option>
-            <option value="EN_PROGRESO">En progreso</option>
-            <option value="COMPLETADA">Completada</option>
-          </select>
-          <select className="border rounded px-2 py-1" value={sort} onChange={(e)=>setSort(e.target.value as any)}>
-            <option value="alpha">Orden alfabético</option>
-            <option value="recent">Más recientes</option>
-          </select>
-          <button className="px-3 py-1 bg-foreground text-background rounded" onClick={()=>{ setCreateTab("form"); setCreateOpen(true); }}>Nueva Ficha</button>
-          <button className="px-3 py-1 border rounded" onClick={()=>{ setCreateTab("file"); setCreateOpen(true); }}>Nueva desde archivo</button>
+      {/* Barra de navegación fija */}
+      <div className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b">
+        <div className="flex items-center justify-between px-3 py-2">
+          <div className="flex items-center gap-4 text-sm">
+            <Link href="/tareas" className="px-3 py-1 rounded border">Programa</Link>
+            <span className="px-3 py-1 rounded border bg-neutral-100">Fichas</span>
+          </div>
         </div>
       </div>
 
-      {/* Se elimina el formulario inline y la creación desde archivo; ahora viven en el modal */}
+      {/* Encabezado con botón Nuevo */}
+      <div className="flex items-center justify-between px-1">
+        <h1 className="text-2xl font-bold">Fichas</h1>
+        <button
+          className="inline-flex items-center gap-2 px-3 py-2 rounded bg-foreground text-background"
+          onClick={() => setCreateOpen(true)}
+          aria-label="Nueva ficha"
+        >
+          <PlusCircleIcon className="w-5 h-5" />
+          <span>Nuevo</span>
+        </button>
+      </div>
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Cargando...</p>
       ) : (
         <>
-          <ul className="grid gap-3">
+          <ul className="grid gap-2">
             {filtered?.map((f) => (
-              <li key={f.id} className="border rounded p-3 flex flex-col gap-3">
-                {editId === f.id ? (
-                  <>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <input className="border rounded px-2 py-1" value={editForm.titulo || ""} onChange={(e)=>setEditForm({ ...editForm, titulo: e.target.value })} />
-                      <select className="border rounded px-2 py-1" value={editForm.prioridad || "MEDIA"} onChange={(e)=>setEditForm({ ...editForm, prioridad: e.target.value })}>
-                        <option value="BAJA">Baja</option>
-                        <option value="MEDIA">Media</option>
-                        <option value="ALTA">Alta</option>
-                      </select>
-                      <input className="border rounded px-2 py-1 sm:col-span-2" placeholder="Descripción" value={editForm.descripcion || ""} onChange={(e)=>setEditForm({ ...editForm, descripcion: e.target.value })} />
-                      <select className="border rounded px-2 py-1" value={editForm.estado || "ABIERTA"} onChange={(e)=>setEditForm({ ...editForm, estado: e.target.value })}>
-                        <option value="ABIERTA">Abierta</option>
-                        <option value="EN_PROGRESO">En progreso</option>
-                        <option value="COMPLETADA">Completada</option>
-                      </select>
-                      <input className="border rounded px-2 py-1" placeholder="Asignado a" value={editForm.asignado_a || ""} onChange={(e)=>setEditForm({ ...editForm, asignado_a: e.target.value })} />
-                      <input className="border rounded px-2 py-1" type="date" value={editForm.vencimiento || ""} onChange={(e)=>setEditForm({ ...editForm, vencimiento: e.target.value })} />
-                    </div>
-                    <textarea className="border rounded px-2 py-1" rows={3} placeholder="Instrucciones" value={editForm.instrucciones || ""} onChange={(e)=>setEditForm({ ...editForm, instrucciones: e.target.value })} />
-                    <div className="border rounded p-2">
+              <li key={f.id} className="border rounded px-3 py-2 flex items-center justify-between">
+                <span className="truncate font-medium">{f.titulo}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="inline-flex items-center justify-center w-8 h-8 rounded border hover:bg-neutral-100"
+                    onClick={() => startEdit(f)}
+                    aria-label="Editar"
+                    title="Editar"
+                  >
+                    <PencilSquareIcon className="w-5 h-5" />
+                  </button>
+                  <button
+                    className="inline-flex items-center justify-center w-8 h-8 rounded border hover:bg-red-50 text-red-600"
+                    onClick={async () => { if (confirm("¿Eliminar ficha?")) await deleteFicha(f.id); }}
+                    aria-label="Eliminar"
+                    title="Eliminar"
+                  >
+                    <TrashIcon className="w-5 h-5" />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {/* Modal de creación (formato unificado) */}
+      {createOpen && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/60" onClick={()=>setCreateOpen(false)} />
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="bg-[#fbfbfa] rounded shadow-lg w-[95vw] max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+              <div className="px-4 py-3 border-b flex items-center gap-2">
+                <div className="text-lg font-semibold">Tareas</div>
+                <button className="ml-auto px-2 py-1 border rounded" onClick={()=>setCreateOpen(false)} aria-label="Cerrar">✕</button>
+              </div>
+              <div className="flex-1 overflow-auto p-4">
+                <form onSubmit={createFicha} className="flex flex-col gap-6">
+                  <div>
+                    <input className="w-full border rounded px-3 py-3 bg-white" placeholder="Nombre" value={form.titulo} onChange={(e)=>setForm({...form, titulo:e.target.value})} required />
+                  </div>
+                  <hr className="border-neutral-200" />
+                  <div>
+                    <div className="text-sm text-neutral-800 mb-2">Instrucciones</div>
+                    <RichTextEditor value={rtContent} onChange={setRtContent} original="" onAttach={(id, url, name)=>{ setCreatePdfId(id); setCreatePdfName(name); }} />
+                  </div>
+                  <hr className="border-neutral-200" />
+                  <div>
+                    <div className="text-sm text-neutral-800 mb-2">Notas</div>
+                    <RichTextEditor value={rtNotesContent} onChange={setRtNotesContent} original="" />
+                  </div>
+                </form>
+              </div>
+              <div className="px-4 py-3 border-t bg-[#fbfbfa] flex items-center gap-2 justify-end">
+                <button className="rounded bg-foreground text-background px-4 py-2 disabled:opacity-50" disabled={saving || !form.titulo} onClick={createFicha as any}>
+                  {saving?"Guardando...":"Guardar"}
+                </button>
+                <button className="border rounded px-4 py-2" onClick={()=>setCreateOpen(false)}>Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de edición (formato unificado) */}
+      {editOpen && editId && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/60" onClick={() => { setEditOpen(false); setEditId(null); }} />
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="bg-[#fbfbfa] rounded shadow-lg w-[95vw] max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+              <div className="px-4 py-3 border-b flex items-center gap-2">
+                <div className="text-lg font-semibold">Tareas</div>
+                <button className="ml-auto px-2 py-1 border rounded" onClick={() => { setEditOpen(false); setEditId(null); }} aria-label="Cerrar">✕</button>
+              </div>
+              <div className="flex-1 overflow-auto p-4">
+                <div className="flex flex-col gap-6">
+                  <div>
+                    <input className="w-full border rounded px-3 py-3 bg-white" value={editForm.titulo || ""} onChange={(e)=>setEditForm({...editForm, titulo:e.target.value})} />
+                  </div>
+                  <hr className="border-neutral-200" />
+                  <div>
+                    <div className="text-sm text-neutral-800 mb-2">Instrucciones</div>
+                    <RichTextEditor value={editRtContent} onChange={setEditRtContent} original={editForm?.instrucciones || ""} onAttach={(id) => setEditForm((p: any) => ({ ...p, pdfId: id }))} />
+                  </div>
+                  <hr className="border-neutral-200" />
+                  <div>
+                    <div className="text-sm text-neutral-800 mb-2">Notas</div>
+                    <RichTextEditor value={editNotesRtContent} onChange={setEditNotesRtContent} original={editForm?.notas || ""} />
+
+                    {/* Adjuntos existentes */}
+                    <div className="border rounded p-2 bg-white">
                       <div className="font-medium mb-2">Archivo de ficha</div>
                       <div className="flex items-center gap-2">
                         {editForm.pdfId ? (
@@ -384,141 +561,22 @@ export default function FichasPage() {
                         <input ref={editFileRef} type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
                       </div>
                     </div>
-                    <div className="border rounded p-2">
-                      <div className="font-medium mb-2">Checklist</div>
-                      <div className="flex gap-2 mb-2">
-                        <input className="border rounded px-2 py-1 flex-1" placeholder="Nuevo ítem" value={editNewItem} onChange={(e)=>setEditNewItem(e.target.value)} />
-                        <button type="button" className="px-3 py-1 border rounded" onClick={addEditChecklistItem}>Agregar</button>
-                      </div>
-                      <ul className="space-y-1">
-                        {editChecklist.map((it, idx) => (
-                          <li key={idx} className="flex items-center gap-2">
-                            <input type="checkbox" checked={!!it.done} onChange={()=>toggleEditChecklistItem(idx)} />
-                            <span className={it.done?"line-through":""}>{it.text}</span>
-                            <div className="flex items-center gap-1 ml-auto">
-                              <button type="button" className="text-xs border rounded px-2 py-0.5" disabled={idx===0} onClick={()=>moveEditChecklistItem(idx,-1)}>▲</button>
-                              <button type="button" className="text-xs border rounded px-2 py-0.5" disabled={idx===editChecklist.length-1} onClick={()=>moveEditChecklistItem(idx,1)}>▼</button>
-                              <button type="button" className="text-red-600" onClick={()=>removeEditChecklistItem(idx)}>Quitar</button>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <textarea className="border rounded px-2 py-1" rows={3} placeholder="Notas de inspección" value={editForm.notas || ""} onChange={(e)=>setEditForm({ ...editForm, notas: e.target.value })} />
-                    <div className="flex items-center gap-2">
-                      <button type="button" className="px-3 py-1 border rounded" onClick={()=>setEditId(null)}>Cancelar</button>
-                      <button type="button" className="px-3 py-1 bg-foreground text-background rounded" onClick={()=>saveEdit(f.id)}>Guardar</button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex-1">
-                    <div className="font-medium flex items-center gap-2">
-                      <span>{f.titulo}</span>
-                      {f.pdfId ? (
-                        <a className="text-blue-700 underline text-sm" href={`/api/tareas/fichas/file/${f.pdfId}`} target="_blank" rel="noreferrer">Ver archivo</a>
-                      ) : null}
-                    </div>
-                    <div className="text-sm text-neutral-600">{f.descripcion}</div>
-                    <div className="text-xs text-neutral-500 mt-1">
-                      Prioridad: {f.prioridad} · Estado: {f.estado}
-                      {f.vencimiento ? ` · Vence: ${new Date(f.vencimiento).toLocaleDateString()}` : ""}
-                      {f.asignado_a ? ` · Asignado: ${f.asignado_a}` : ""}
-                    </div>
-                    {f.instrucciones ? (
-                      <div className="mt-2">
-                        <div className="text-xs font-semibold text-neutral-700">Instrucciones</div>
-                        <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: f.instrucciones }} />
-                      </div>
-                    ) : null}
-                    {Array.isArray(f.checklist) && f.checklist.length > 0 ? (
-                      <div className="mt-2">
-                        <div className="text-xs font-semibold text-neutral-700">Checklist</div>
-                        <ul className="text-sm mt-1 space-y-1">
-                          {f.checklist.map((it, idx) => (
-                            <li key={idx} className="flex items-center gap-2">
-                              <input type="checkbox" checked={!!it.done} readOnly />
-                              <span className={it.done?"line-through":""}>{it.text}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : null}
-                    {f.notas ? (
-                      <div className="mt-2">
-                        <div className="text-xs font-semibold text-neutral-700">Notas</div>
-                        <div className="text-sm whitespace-pre-wrap">{f.notas}</div>
-                      </div>
-                    ) : null}
                   </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <button className="text-green-700" onClick={()=>openPreview(f)}>Ver</button>
-                  {editId === f.id ? null : <button className="text-blue-700" onClick={()=>startEdit(f)} title="Editar">✏️ Editar</button>}
-                  <button className="text-red-600" onClick={()=>deleteFicha(f.id)}>Eliminar</button>
                 </div>
-              </li>
-            ))}
-          </ul>
-          <div className="flex items-center justify-between pt-2">
-            <span className="text-sm text-neutral-600">Página {page} de {maxPage} · {total} fichas</span>
-            <div className="flex items-center gap-2">
-              <button className="px-3 py-1 border rounded" disabled={page<=1} onClick={()=>setPage((p)=>Math.max(1,p-1))}>Anterior</button>
-              <button className="px-3 py-1 border rounded" disabled={page>=maxPage} onClick={()=>setPage((p)=>Math.min(maxPage,p+1))}>Siguiente</button>
-            </div>
-          </div>
-        </>
-      )}
-
-      {createOpen && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/60" onClick={()=>setCreateOpen(false)} />
-          <div className="absolute inset-0 flex items-center justify-center p-4">
-            <div className="bg-white rounded shadow-lg w-[95vw] max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
-              <div className="px-4 py-2 border-b flex items-center gap-2">
-                <div className="font-medium flex-1">Nueva ficha</div>
-                <div className="flex items-center gap-2">
-                  <button className={`px-3 py-1 border rounded ${createTab==='form'?'bg-neutral-100':''}`} onClick={()=>setCreateTab('form')}>Formulario</button>
-                  <button className={`px-3 py-1 border rounded ${createTab==='file'?'bg-neutral-100':''}`} onClick={()=>setCreateTab('file')}>Desde archivo</button>
-                </div>
-                <button className="ml-2 px-2 py-1 border rounded" onClick={()=>setCreateOpen(false)}>Cerrar</button>
               </div>
-              <div className="flex-1 overflow-auto p-4 bg-neutral-50">
-                {createTab === 'form' ? (
-                  <form onSubmit={createFicha} className="p-4 border rounded bg-white flex flex-col gap-4">
-                    <div>
-                      <label className="block text-sm text-neutral-700 mb-1">Nombre</label>
-                      <input className="w-full border rounded px-3 py-2" placeholder="Nombre" value={form.titulo} onChange={(e)=>setForm({...form, titulo:e.target.value})} required />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-neutral-700 mb-1">Instrucciones</label>
-                      <RichTextEditor value={rtContent} onChange={setRtContent} onAttach={(id, url, name)=>{ setCreatePdfId(id); setCreatePdfName(name); }} />
-                      {createPdfId ? (<div className="text-xs text-neutral-600 mt-1">Archivo adjunto: <a href={`/api/tareas/fichas/file/${createPdfId}`} className="underline" target="_blank" rel="noreferrer">{createPdfName || "archivo"}</a></div>) : null}
-                    </div>
-                    <div>
-                      <label className="block text-sm text-neutral-700 mb-1">Notas</label>
-                      <textarea className="w-full border rounded px-3 py-2 min-h-[160px]" value={form.notas} onChange={(e)=>setForm({...form, notas:e.target.value})} />
-                    </div>
-                    <div className="flex items-center justify-end gap-2">
-                      <button type="button" className="border rounded px-4 py-2" onClick={()=>setCreateOpen(false)}>Cancelar</button>
-                      <button className="rounded bg-foreground text-background px-4 py-2" disabled={saving}>{saving?"Guardando...":"Guardar"}</button>
-                    </div>
-                  </form>
-                ) : (
-                  <form onSubmit={createFromFile} className="p-4 border rounded bg-white flex flex-col gap-3">
-                    <div className="text-sm text-neutral-600">Selecciona un archivo PDF/DOCX y crearemos la ficha automáticamente con el nombre del archivo.</div>
-                    <input ref={fileRef} type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
-                    <div className="flex items-center gap-2">
-                      <button type="button" className="border rounded px-3 py-1" onClick={()=>setCreateOpen(false)}>Cancelar</button>
-                      <button className="rounded bg-foreground text-background px-3 py-1" disabled={uploading}>{uploading?"Subiendo...":"Crear desde archivo (PDF/DOCX)"}</button>
-                    </div>
-                  </form>
-                )}
+              <div className="px-4 py-3 border-t bg-[#fbfbfa] flex items-center gap-2 justify-between">
+                <button className="border border-red-600 text-red-700 rounded px-4 py-2 hover:bg-red-50" onClick={handleDeleteCurrent}>Eliminar</button>
+                <div className="flex items-center gap-2">
+                  <button className="rounded bg-foreground text-background px-4 py-2" onClick={() => saveEdit(editId!)}>Guardar</button>
+                  <button className="border rounded px-4 py-2" onClick={() => { setEditOpen(false); setEditId(null); }}>Cancelar</button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* Nuevo modal de vista con pestañas (Vista / Archivo) */}
       {previewFicha && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/60" onClick={closePreview} />

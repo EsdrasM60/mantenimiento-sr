@@ -9,6 +9,7 @@ const VolunteerSchema = new Schema(
     a2: { type: Boolean, default: false },
     trabajo_altura: { type: Boolean, default: false },
     created_by: { type: String },
+    shortId: { type: String, index: true, unique: true },
   },
   { timestamps: true }
 );

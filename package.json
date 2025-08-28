@@ -12,10 +12,12 @@
     "pm2:stop": "pm2 stop ecosystem.config.js || true",
     "pm2:delete": "pm2 delete ecosystem.config.js || true",
     "pm2:logs": "pm2 logs",
-    "tunnel": "cloudflared tunnel --url http://localhost:3000 --no-autoupdate --loglevel info --metrics 127.0.0.1:0"
+    "tunnel": "cloudflared tunnel --url http://localhost:3000 --no-autoupdate --loglevel info --metrics 127.0.0.1:0",
+    "reset:admin": "node -r dotenv/config ./scripts/reset-admin.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",
+    "@heroicons/react": "^2.2.0",
     "@prisma/client": "^6.14.0",
     "bcryptjs": "^3.0.2",
     "better-sqlite3": "^12.2.0",
@@ -25,6 +27,7 @@
     "nodemailer": "^6.10.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "sharp": "0.33.3",
     "swr": "^2.3.6",
     "zod": "^4.0.17"
   },

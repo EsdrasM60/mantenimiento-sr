@@ -52,7 +52,8 @@ export default function UsersManager() {
     await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
     mutate();
   }
-  async function createUser() {
+  async function createUser(e?: React.FormEvent) {
+    if (e) e.preventDefault();
     const res = await fetch(`/api/admin/users`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -84,47 +85,46 @@ export default function UsersManager() {
       </div>
 
       {creating && canManage && (
-        <div className="mb-2 grid grid-cols-1 md:grid-cols-5 gap-3">
-          <input
-            className="border rounded px-3 py-2"
-            placeholder="Nombre"
-            value={createForm.name}
-            onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-          />
-          <input
-            className="border rounded px-3 py-2"
-            placeholder="Email"
-            value={createForm.email}
-            onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-          />
-          <input
-            className="border rounded px-3 py-2"
-            placeholder="Contraseña"
-            type="password"
-            value={createForm.password}
-            onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-          />
-          <select
-            className="border rounded px-3 py-2"
-            value={createForm.role}
-            onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
-          >
-            <option value="VOLUNTARIO">VOLUNTARIO</option>
-            <option value="COORDINADOR">COORDINADOR</option>
-            <option value="ADMIN">ADMIN</option>
-          </select>
-          <label className="inline-flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={createForm.approved}
-              onChange={(e) => setCreateForm({ ...createForm, approved: e.target.checked })}
-            />
-            Aprobado
-          </label>
-          <div className="md:col-span-5">
-            <button className="px-4 py-2 rounded bg-blue-600 text-white" onClick={createUser}>
-              Crear usuario
-            </button>
+        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setCreating(false)} />
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="card w-[95vw] max-w-2xl max-h-[85vh] overflow-auto">
+              <div className="px-4 py-3 card-header flex items-center gap-2">
+                <div className="font-semibold">Nuevo usuario</div>
+                <button className="ml-auto btn btn-ghost" onClick={() => setCreating(false)}>Cerrar</button>
+              </div>
+              <form onSubmit={createUser} className="p-4 grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-sm">Nombre</label>
+                  <input className="input w-full" placeholder="Nombre" value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm">Email</label>
+                  <input className="input w-full" placeholder="Email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm">Contraseña</label>
+                  <input className="input w-full" placeholder="Contraseña" type="password" value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm">Rol</label>
+                  <select className="input w-full" value={createForm.role} onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}>
+                    <option value="VOLUNTARIO">VOLUNTARIO</option>
+                    <option value="COORDINADOR">COORDINADOR</option>
+                    <option value="ADMIN">ADMIN</option>
+                  </select>
+                </div>
+                <div className="sm:col-span-2 flex items-center gap-2 pt-1">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={createForm.approved} onChange={(e) => setCreateForm({ ...createForm, approved: e.target.checked })} />
+                    Aprobado
+                  </label>
+                </div>
+                <div className="sm:col-span-2 text-right pt-2">
+                  <button type="submit" className="btn btn-primary">Crear usuario</button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

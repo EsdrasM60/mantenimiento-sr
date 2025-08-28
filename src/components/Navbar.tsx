@@ -22,16 +22,16 @@ export function Navbar() {
 	}, [pathname]);
 
 	return (
-		<header className="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-900 text-white">
+		<header className="sticky top-0 z-40 bg-gradient-to-r from-[color:var(--brand)] via-[color:var(--info)] to-[color:var(--warning)] text-white shadow-md">
 			<div className="mx-auto max-w-7xl px-4 py-3 flex items-center gap-3">
 				<button
-					className="p-2 rounded border border-neutral-700 inline-flex items-center justify-center"
+					className="p-2 rounded border border-white/30 inline-flex items-center justify-center hover:bg-white/10"
 					onClick={() => setOpen((v) => !v)}
 					aria-label={open ? "Cerrar menú" : "Abrir menú"}
 					aria-controls="app-sidebar"
 					aria-expanded={open}
 				>
-					<span className="relative block w-6 h-4">
+					<span className="relative block w-6 h-4 text-white">
 						<span
 							className={`absolute left-0 top-0 h-0.5 w-6 bg-current transition-transform duration-300 ${
 								open ? "translate-y-1.5 rotate-45" : ""
@@ -50,28 +50,22 @@ export function Navbar() {
 					</span>
 				</button>
 				<Link
-					href="/"
-					className="font-semibold tracking-tight"
+					href="/dashboard"
+					className="font-semibold tracking-tight text-white"
 				>
 					Mantenimiento SR
 				</Link>
 				<div className="ml-auto flex items-center gap-3 text-sm">
 					{session.status === "authenticated" ? (
 						<>
-							<span className="hidden sm:inline text-neutral-300">
-								Hola, {user.name || "Usuario"} 👋
-							</span>
-							{user.role && (
-								<span className="rounded border border-neutral-700 px-2 py-0.5 text-neutral-200">
-									{user.role}
+							{user.name ? (
+								<span className="hidden sm:inline text-white/90">
+									{user.name}
 								</span>
-							)}
+							) : null}
 						</>
 					) : (
-						<Link
-							href="/signin"
-							className="px-3 py-1 rounded border border-neutral-700"
-						>
+						<Link href="/signin" className="btn btn-primary">
 							Ingresar
 						</Link>
 					)}

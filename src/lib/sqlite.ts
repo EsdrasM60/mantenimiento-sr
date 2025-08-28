@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS volunteers (
   a2 INTEGER DEFAULT 0,
   trabajo_altura INTEGER DEFAULT 0,
   created_by TEXT,
+  short_id TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -47,6 +48,9 @@ try { db.prepare("ALTER TABLE fichas ADD COLUMN instrucciones TEXT").run(); } ca
 try { db.prepare("ALTER TABLE fichas ADD COLUMN notas TEXT").run(); } catch {}
 try { db.prepare("ALTER TABLE fichas ADD COLUMN checklist TEXT").run(); } catch {}
 try { db.prepare("ALTER TABLE fichas ADD COLUMN pdfId TEXT").run(); } catch {}
+
+// Add new columns for volunteers if they don't exist yet
+try { db.prepare("ALTER TABLE volunteers ADD COLUMN short_id TEXT").run(); } catch {}
 
 // Seed admin from env if not exists
 try {
