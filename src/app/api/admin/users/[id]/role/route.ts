@@ -9,10 +9,8 @@ const roleSchema = z.object({
   role: z.enum(["ADMIN", "COORDINADOR", "USER"]),
 });
 
-export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(req: Request, context: any) {
+  const { params } = context as { params: { id: string } };
   const session = await getServerSession(authOptions);
   // @ts-ignore
   const r = session?.user?.role as string | undefined;
