@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS volunteers (
   id TEXT PRIMARY KEY,
   nombre TEXT NOT NULL,
   apellido TEXT NOT NULL,
+  email TEXT,
   telefono TEXT,
   congregacion TEXT,
   a2 INTEGER DEFAULT 0,
@@ -51,6 +52,7 @@ try { db.prepare("ALTER TABLE fichas ADD COLUMN pdfId TEXT").run(); } catch {}
 
 // Add new columns for volunteers if they don't exist yet
 try { db.prepare("ALTER TABLE volunteers ADD COLUMN short_id TEXT").run(); } catch {}
+try { db.prepare("ALTER TABLE volunteers ADD COLUMN email TEXT").run(); } catch {}
 
 // Seed admin from env if not exists
 try {

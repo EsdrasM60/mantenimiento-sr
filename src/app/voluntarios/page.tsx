@@ -19,6 +19,7 @@ export default function VoluntariosPage() {
   const [form, setForm] = useState({
     nombre: "",
     apellido: "",
+    email: "",
     telefono: "",
     congregacion: "",
     a2: false,
@@ -37,9 +38,16 @@ export default function VoluntariosPage() {
       body: JSON.stringify(form),
     });
     if (res.ok) {
-      setForm({ nombre: "", apellido: "", telefono: "", congregacion: "", a2: false, trabajo_altura: false });
+      setForm({ nombre: "", apellido: "", email: "", telefono: "", congregacion: "", a2: false, trabajo_altura: false });
       setShowCreate(false);
       mutate();
+    } else {
+      const msg = await res.json().catch(() => ({}));
+      if (res.status === 409) {
+        alert(msg?.error || "El voluntario ya existe");
+      } else {
+        alert(msg?.error || "Error guardando");
+      }
     }
   }
 
@@ -48,6 +56,7 @@ export default function VoluntariosPage() {
     setEditForm({
       nombre: v.nombre,
       apellido: v.apellido,
+      email: v.email || "",
       telefono: v.telefono || "",
       congregacion: v.congregacion || "",
       a2: !!v.a2,
@@ -117,6 +126,15 @@ export default function VoluntariosPage() {
                     value={form.apellido}
                     onChange={(e) => setForm({ ...form, apellido: e.target.value })}
                     required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Correo</label>
+                  <input
+                    className="w-full input"
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
                   />
                 </div>
                 <div>
@@ -193,6 +211,15 @@ export default function VoluntariosPage() {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm mb-1">Correo</label>
+                  <input
+                    className="w-full input"
+                    type="email"
+                    value={editForm.email || ""}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  />
+                </div>
+                <div>
                   <label className="block text-sm mb-1">Teléfono</label>
                   <input
                     className="w-full input"
@@ -243,6 +270,7 @@ export default function VoluntariosPage() {
             <tr className="text-left border-b">
               <th className="py-2">Nombre</th>
               <th>ID</th>
+              <th>Correo</th>
               <th>Teléfono</th>
               <th>Congregación</th>
               <th>A2</th>
@@ -261,6 +289,7 @@ export default function VoluntariosPage() {
                     <code className="text-xs font-mono text-neutral-700 bg-neutral-100 px-1.5 py-0.5 rounded">{v.shortId || shortId(v.id || v._id)}</code>
                   </div>
                 </td>
+                <td>{v.email || "—"}</td>
                 <td>{v.telefono || "—"}</td>
                 <td>{v.congregacion || "—"}</td>
                 <td>{v.a2 ? "Sí" : "No"}</td>

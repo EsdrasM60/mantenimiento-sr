@@ -4,6 +4,7 @@ const VolunteerSchema = new Schema(
   {
     nombre: { type: String, required: true },
     apellido: { type: String, required: true },
+    email: { type: String, index: true, unique: true, sparse: true },
     telefono: { type: String },
     congregacion: { type: String },
     a2: { type: Boolean, default: false },
