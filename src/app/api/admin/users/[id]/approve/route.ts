@@ -4,10 +4,8 @@ import { authOptions, role as RoleEnum } from "@/lib/auth";
 import { db } from "@/lib/sqlite";
 import { connectMongo } from "@/lib/mongo";
 
-export async function POST(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(_req: Request, context: any) {
+  const { params } = context as { params: { id: string } };
   const session = await getServerSession(authOptions);
   // @ts-ignore
   const r = session?.user?.role as string | undefined;
