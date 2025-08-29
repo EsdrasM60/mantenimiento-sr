@@ -10,10 +10,8 @@ const patchSchema = z.object({
   email: z.string().email().optional(),
 });
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(req: Request, context: any) {
+  const { params } = context as { params: { id: string } };
   const session = await getServerSession(authOptions);
   // @ts-ignore
   const r = session?.user?.role as string | undefined;
@@ -67,10 +65,8 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(_req: Request, context: any) {
+  const { params } = context as { params: { id: string } };
   const session = await getServerSession(authOptions);
   // @ts-ignore
   const r = session?.user?.role as string | undefined;
