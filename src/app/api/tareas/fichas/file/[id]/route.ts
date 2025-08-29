@@ -3,7 +3,8 @@ import { getGridFSBucket, toObjectId } from "@/lib/gridfs";
 
 export const runtime = "nodejs";
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, context: any) {
+  const { params } = context as { params: { id: string } };
   const _id = toObjectId(params.id);
   if (!_id) return NextResponse.json({ error: "id inválido" }, { status: 400 });
 

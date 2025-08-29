@@ -5,10 +5,8 @@ import { authOptions, role as RoleEnum } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: Request, context: any) {
+  const { params } = context as { params: { id: string } };
   const _id = toObjectId(params.id);
   if (!_id) return NextResponse.json({ error: "id inválido" }, { status: 400 });
 
@@ -31,10 +29,8 @@ export async function GET(
   });
 }
 
-export async function DELETE(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(_req: Request, context: any) {
+  const { params } = context as { params: { id: string } };
   const session = await getServerSession(authOptions);
   // @ts-ignore
   const r = session?.user?.role as string | undefined;

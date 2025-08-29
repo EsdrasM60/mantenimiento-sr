@@ -13,14 +13,12 @@ const patchSchema = z.object({
   trabajo_altura: z.boolean().optional(),
 });
 
-export async function GET(
-  _req: Request,
-  ctx: { params: Promise<{ id: string }> }
-) {
+export async function GET(_req: Request, context: any) {
+  const { params } = context as { params: { id: string } };
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { id } = await ctx.params;
+  const id = params.id;
 
   try {
     if (process.env.MONGODB_URI) {
@@ -53,10 +51,8 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  req: Request,
-  ctx: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(req: Request, context: any) {
+  const { params } = context as { params: { id: string } };
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -64,7 +60,7 @@ export async function PATCH(
   if (!parsed.success) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
 
   const updates = parsed.data as any;
-  const { id } = await ctx.params;
+  const id = params.id;
 
   try {
     if (process.env.MONGODB_URI) {
@@ -104,10 +100,8 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  _req: Request,
-  ctx: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_req: Request, context: any) {
+  const { params } = context as { params: { id: string } };
   const session = await auth();
   // Solo ADMIN o COORDINADOR pueden eliminar
   // @ts-ignore
@@ -116,7 +110,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { id } = await ctx.params;
+  const id = params.id;
 
   try {
     if (process.env.MONGODB_URI) {

@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { connectMongo } from "@/lib/mongo";
 import Project from "@/models/Project";
 
-export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(req: Request, context: any) {
   try {
     await connectMongo();
-    const { id } = await params;
+    const { params } = context as { params: { id: string } };
+    const { id } = params;
     const body = await req.json().catch(() => ({}));
 
     // Operaciones sobre evidencias
@@ -65,10 +66,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 }
 
-export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_req: Request, context: any) {
   try {
     await connectMongo();
-    const { id } = await params;
+    const { params } = context as { params: { id: string } };
+    const { id } = params;
     const res = await Project.deleteOne({ _id: id });
     if (res.deletedCount === 0) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
     return NextResponse.json({ ok: true });
