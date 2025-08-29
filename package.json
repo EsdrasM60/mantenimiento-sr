@@ -13,7 +13,8 @@
     "pm2:delete": "pm2 delete ecosystem.config.js || true",
     "pm2:logs": "pm2 logs",
     "tunnel": "cloudflared tunnel --url http://localhost:3000 --no-autoupdate --loglevel info --metrics 127.0.0.1:0",
-    "reset:admin": "node -r dotenv/config ./scripts/reset-admin.mjs"
+    "reset:admin": "node -r dotenv/config ./scripts/reset-admin.mjs",
+    "migrate:sqlite-to-mongo": "node -r dotenv/config ./scripts/migrate-sqlite-to-mongo.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",
