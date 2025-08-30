@@ -2,8 +2,14 @@
 import useSWR from "swr";
 import { useState } from "react";
 import { PencilSquareIcon, TrashIcon, PlusCircleIcon } from "@heroicons/react/24/outline";
+import Link from "next/link";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const fetcher = async (url: string) => {
+  const r = await fetch(url, { credentials: "include" });
+  let data: any = null;
+  try { data = await r.json(); } catch {}
+  return { ok: r.ok, status: r.status, data } as { ok: boolean; status: number; data: any };
+};
 
 // ID corto estable (100-999) derivado del id real
 function shortId(input?: string) {
@@ -15,7 +21,9 @@ function shortId(input?: string) {
 }
 
 export default function VoluntariosPage() {
-  const { data, mutate } = useSWR("/api/voluntarios", fetcher);
+  const { data: res, mutate } = useSWR("/api/voluntarios", fetcher);
+  const items = Array.isArray(res?.data) ? res!.data : [];
+  const unauthorized = res && res.status === 401;
   const [form, setForm] = useState({
     nombre: "",
     apellido: "",
@@ -98,6 +106,13 @@ export default function VoluntariosPage() {
           <span>Nuevo</span>
         </button>
       </div>
+
+      {unauthorized ? (
+        <div className="p-4 rounded border bg-yellow-50 text-yellow-800">
+          Necesitas iniciar sesión para ver esta sección. {" "}
+          <Link href="/signin" className="underline">Ir a iniciar sesión</Link>
+        </div>
+      ) : null}
 
       {/* Create Modal */}
       {showCreate && (
@@ -279,7 +294,7 @@ export default function VoluntariosPage() {
             </tr>
           </thead>
           <tbody>
-            {(data ?? []).map((v: any) => (
+            {items.map((v: any) => (
               <tr key={v.id || v._id} className="border-b">
                 <td className="py-2">
                   <span>{v.nombre} {v.apellido}</span>

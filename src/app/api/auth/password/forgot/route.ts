@@ -34,23 +34,37 @@ export async function POST(req: Request) {
     await Token.deleteMany({ email });
     await Token.create({ email, token, expiresAt: new Date(expires) });
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || "";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
     const link = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT || 587),
-      secure: false,
-      auth: process.env.SMTP_USER && process.env.SMTP_PASS ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
-    });
+    // Transporte de correo
+    const isProd = process.env.NODE_ENV === "production";
+    let transporter;
+    if (process.env.SMTP_HOST) {
+      transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: false,
+        auth: process.env.SMTP_USER && process.env.SMTP_PASS ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
+      });
+    } else {
+      // Modo dev: no SMTP, usar jsonTransport y mostrar link en logs
+      transporter = nodemailer.createTransport({ jsonTransport: true } as any);
+    }
 
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    const info = await transporter.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER || "dev@example.com",
       to: email,
       subject: "Restablecer contraseña",
       text: `Usa este enlace para restablecer tu contraseña: ${link}`,
       html: `<p>Usa este enlace para restablecer tu contraseña:</p><p><a href="${link}">${link}</a></p>`,
     });
+
+    if (!process.env.SMTP_HOST && !isProd) {
+      // Exponer el enlace en respuesta para facilitar pruebas locales
+      return NextResponse.json({ ok: true, debugLink: link, info });
+    }
   } catch (e) {
     // no revelar errores
   }

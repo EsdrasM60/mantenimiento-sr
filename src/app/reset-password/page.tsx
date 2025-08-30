@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -45,20 +46,45 @@ export default function ResetPasswordPage() {
       {ok ? (
         <p className="text-sm">Contraseña actualizada. Redirigiendo…</p>
       ) : (
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm mb-1">Nueva contraseña</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border rounded px-3 py-2" />
-          </div>
-          <div>
-            <label className="block text-sm mb-1">Confirmar contraseña</label>
-            <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className="w-full border rounded px-3 py-2" />
-          </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button type="submit" className="px-4 py-2 rounded bg-foreground text-background" disabled={loading}>
-            {loading ? "Guardando..." : "Guardar"}
-          </button>
-        </form>
+        <>
+          {!token || !email ? (
+            <p className="text-sm mb-4">
+              Enlace inválido. Solicita uno nuevo en{" "}
+              <Link href="/forgot-password" className="underline">
+                Recuperar contraseña
+              </Link>
+              .
+            </p>
+          ) : null}
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm mb-1">Nueva contraseña</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full border rounded px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block text-sm mb-1">Confirmar contraseña</label>
+              <input
+                type="password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                className="w-full border rounded px-3 py-2"
+              />
+            </div>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            <button
+              type="submit"
+              className="px-4 py-2 rounded bg-foreground text-background"
+              disabled={loading || !token || !email}
+            >
+              {loading ? "Guardando..." : "Guardar"}
+            </button>
+          </form>
+        </>
       )}
     </div>
   );

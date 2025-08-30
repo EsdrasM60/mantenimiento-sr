@@ -63,6 +63,9 @@ export function Navbar() {
 									{user.name}
 								</span>
 							) : null}
+							<Link href="/perfil" className="btn btn-ghost">
+								Perfil
+							</Link>
 						</>
 					) : (
 						<Link href="/signin" className="btn btn-primary">

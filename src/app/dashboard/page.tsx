@@ -8,6 +8,8 @@ export default async function DashboardPage() {
   const userName = session?.user?.name || session?.user?.email || "";
   const userRole = (session?.user as any)?.role as string | undefined;
   const isAdmin = userRole === RoleEnum.ADMIN;
+  const settings = ((session?.user as any)?.settings || {}) as { widgets?: string[] };
+  const allowed = Array.isArray(settings.widgets) && settings.widgets.length > 0 ? new Set(settings.widgets) : null;
 
   const now = new Date();
   const yy = now.getFullYear();
@@ -52,8 +54,12 @@ export default async function DashboardPage() {
   return (
     <section className="space-y-6">
       <h1 className="text-2xl font-bold">Dashboard</h1>
-      <ProgramasPendientesWidget items={programas} isAdmin={isAdmin} userName={userName} />
-      <ProyectosWidget items={proyectos} isAdmin={isAdmin} userName={userName} />
+      {(!allowed || allowed.has("dashboard:programas")) && (
+        <ProgramasPendientesWidget items={programas} isAdmin={isAdmin} userName={userName} />
+      )}
+      {(!allowed || allowed.has("dashboard:proyectos")) && (
+        <ProyectosWidget items={proyectos} isAdmin={isAdmin} userName={userName} />
+      )}
     </section>
   );
 }

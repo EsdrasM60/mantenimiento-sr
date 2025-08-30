@@ -14,6 +14,10 @@ export const role = {
 
 type Role = typeof role[keyof typeof role];
 
+type Settings = { theme?: "system" | "light" | "dark"; widgets?: string[] };
+
+type SlimUser = { role: Role | null; approved: boolean; name?: string | null; settings?: Settings };
+
 const credentialsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
@@ -44,17 +48,22 @@ async function getUserByEmail(email: string) {
   return row ?? null;
 }
 
-async function getRoleAndApproved(email: string) {
+async function getRoleAndApproved(email: string): Promise<SlimUser> {
   if (process.env.MONGODB_URI) {
     await connectMongo();
     const { default: User } = await import("@/models/User");
-    const u = await User.findOne({ email }).select({ role: 1, emailVerified: 1 }).lean();
-    return { role: (u as any)?.role as Role | null, approved: !!(u as any)?.emailVerified };
+    const u = await User.findOne({ email }).select({ role: 1, emailVerified: 1, name: 1, settings: 1 }).lean();
+    return {
+      role: (u as any)?.role as Role | null,
+      approved: !!(u as any)?.emailVerified,
+      name: (u as any)?.name ?? null,
+      settings: (u as any)?.settings ?? {},
+    };
   }
   const row = db
-    .prepare("SELECT role, email_verified as emailVerified FROM users WHERE email = ?")
-    .get(email) as { role: Role | null; emailVerified: number } | undefined;
-  return { role: row?.role ?? null, approved: row?.emailVerified === 1 };
+    .prepare("SELECT name, role, email_verified as emailVerified FROM users WHERE email = ?")
+    .get(email) as { name: string | null; role: Role | null; emailVerified: number } | undefined;
+  return { role: row?.role ?? null, approved: row?.emailVerified === 1, name: row?.name ?? null, settings: {} };
 }
 
 export const authOptions: NextAuthOptions = {
@@ -80,11 +89,13 @@ export const authOptions: NextAuthOptions = {
           // mensaje personalizado en ?error=
           throw new Error("PendienteAprobacion");
         }
+        const { role: r, name, settings } = await getRoleAndApproved(email);
         return {
           id: row.id,
           email: row.email,
-          name: row.name ?? undefined,
-          role: row.role ?? role.VOLUNTARIO,
+          name: name ?? row.name ?? undefined,
+          role: r ?? row.role ?? role.VOLUNTARIO,
+          settings: settings ?? {},
         } as any;
       },
     }),
@@ -94,14 +105,22 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         // @ts-ignore
         token.role = (user as any).role ?? token.role ?? role.VOLUNTARIO;
+        // @ts-ignore
+        token.name = (user as any).name ?? token.name;
+        // @ts-ignore
+        token.settings = (user as any).settings ?? token.settings ?? {};
       }
       if (token?.email) {
         try {
-          const { role: r, approved } = await getRoleAndApproved(token.email);
+          const { role: r, approved, name, settings } = await getRoleAndApproved(token.email);
           // @ts-ignore
           token.role = r ?? token.role ?? role.VOLUNTARIO;
           // @ts-ignore
           token.approved = approved ?? false;
+          // @ts-ignore
+          token.name = name ?? token.name;
+          // @ts-ignore
+          token.settings = settings ?? token.settings ?? {};
         } catch {}
       }
       return token;
@@ -111,6 +130,9 @@ export const authOptions: NextAuthOptions = {
       session.user.role = token.role ?? role.VOLUNTARIO;
       // @ts-ignore
       session.user.approved = token.approved ?? false;
+      if (token?.name) session.user.name = String(token.name);
+      // @ts-ignore
+      session.user.settings = token.settings ?? {};
       return session;
     },
   },
