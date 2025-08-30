@@ -126,13 +126,12 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     session({ session, token }) {
-      // @ts-ignore
-      session.user.role = token.role ?? role.VOLUNTARIO;
-      // @ts-ignore
-      session.user.approved = token.approved ?? false;
-      if (token?.name) session.user.name = String(token.name);
-      // @ts-ignore
-      session.user.settings = token.settings ?? {};
+      const s = session as any;
+      s.user = s.user ?? {};
+      s.user.role = (token as any).role ?? role.VOLUNTARIO;
+      s.user.approved = (token as any).approved ?? false;
+      if (token && (token as any).name) s.user.name = String((token as any).name);
+      s.user.settings = (token as any).settings ?? {};
       return session;
     },
   },
