@@ -68,12 +68,19 @@ export default function SignInPage() {
           {loading ? "Ingresando..." : "Ingresar"}
         </button>
       </form>
-      <p className="text-xs text-muted-foreground mt-4">
-        ¿Nuevo aquí?{" "}
-        <Link href="/register" className="underline">
-          Regístrate
-        </Link>
-      </p>
+      <div className="flex items-center justify-between text-xs text-muted-foreground mt-4">
+        <p>
+          ¿Nuevo aquí?{" "}
+          <Link href="/register" className="underline">
+            Regístrate
+          </Link>
+        </p>
+        <p>
+          <Link href="/forgot-password" className="underline">
+            Olvidé mi contraseña
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }
