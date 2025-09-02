@@ -75,8 +75,11 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             <button
               className="w-full btn btn-ghost"
               onClick={() => {
+                const base = process.env.NEXT_PUBLIC_BASE_URL || undefined;
+                // signOut con callback a Home
+                // @ts-ignore
+                signOut({ callbackUrl: base ? `${base}/` : "/" });
                 onClose();
-                signOut({ callbackUrl: "/" });
               }}
             >
               Salir

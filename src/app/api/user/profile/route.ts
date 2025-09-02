@@ -12,5 +12,6 @@ export async function POST(req: Request) {
   const { default: User } = await import("@/models/User");
   await User.updateOne({ email: session.user.email }, { $set: { name } });
 
-  return NextResponse.redirect(new URL("/perfil", req.url), { status: 303 });
+  const base = process.env.NEXT_PUBLIC_BASE_URL || new URL(req.url).origin;
+  return NextResponse.redirect(`${base}/perfil`, { status: 303 });
 }

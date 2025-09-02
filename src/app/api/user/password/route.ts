@@ -24,5 +24,6 @@ export async function POST(req: Request) {
   const hash = bcrypt.hashSync(next, 10);
   await User.updateOne({ _id: u._id }, { $set: { passwordHash: hash } });
 
-  return NextResponse.redirect(new URL("/perfil", req.url), { status: 303 });
+  const base = process.env.NEXT_PUBLIC_BASE_URL || new URL(req.url).origin;
+  return NextResponse.redirect(`${base}/perfil`, { status: 303 });
 }
