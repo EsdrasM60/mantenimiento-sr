@@ -157,6 +157,7 @@ export default function TareasPage() {
           <div className="flex items-center gap-4 text-sm">
             <span className="px-3 py-1 rounded border bg-neutral-100">Programa</span>
             <Link href="/tareas/fichas" className="px-3 py-1 rounded border">Fichas</Link>
+            <Link href="/tareas/calendario" className="px-3 py-1 rounded border">Calendario</Link>
           </div>
         </div>
       </div>
