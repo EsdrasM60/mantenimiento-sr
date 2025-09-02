@@ -23,10 +23,21 @@ export default function UsersManager() {
     role: "VOLUNTARIO",
     approved: true,
   });
+  const [loadingApprove, setLoadingApprove] = useState<string | null>(null);
 
   async function approve(id: string) {
-    await fetch(`/api/admin/users/${id}/approve`, { method: "POST" });
-    mutate();
+    if (!canManage) return;
+    setLoadingApprove(id);
+    try {
+      const res = await fetch(`/api/admin/users/${id}/approve`, { method: "POST" });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        alert(j?.error || "No se pudo aprobar");
+      }
+      await mutate();
+    } finally {
+      setLoadingApprove(null);
+    }
   }
   async function changeRole(id: string, role: string) {
     await fetch(`/api/admin/users/${id}/role`, {
@@ -189,7 +200,13 @@ export default function UsersManager() {
                   ) : (
                     <>
                       {!u.emailVerified && canManage && (
-                        <button className="px-3 py-1 rounded bg-blue-600 text-white" onClick={() => approve(u.id as string)}>Aprobar</button>
+                        <button
+                          className={"px-3 py-1 rounded text-white " + (loadingApprove === u.id ? "bg-blue-400" : "bg-blue-600 hover:bg-blue-700")}
+                          onClick={() => approve(u.id as string)}
+                          disabled={loadingApprove === u.id}
+                        >
+                          {loadingApprove === u.id ? "Aprobando..." : "Aprobar"}
+                        </button>
                       )}
                       {canManage && (
                         <button
