@@ -8,11 +8,7 @@ import { Sidebar } from "@/components/Sidebar";
 export function Navbar() {
 	const pathname = usePathname();
 	const session = useSession();
-	const user = (session.data?.user ?? {}) as {
-		name?: string | null;
-		email?: string | null;
-		role?: string | null;
-	};
+	const user = (session.data?.user ?? {}) as { name?: string | null };
 	const [open, setOpen] = useState(false);
 
 	useEffect(() => {
