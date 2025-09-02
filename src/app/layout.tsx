@@ -29,7 +29,7 @@ export default async function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <div className="app-bg min-h-screen">
           <Providers session={session}>
-            <Navbar />
+            {session ? <Navbar /> : null}
             <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
           </Providers>
         </div>

@@ -13,13 +13,13 @@ export function Navbar() {
 		email?: string | null;
 		role?: string | null;
 	};
-	// Cerrado por defecto
 	const [open, setOpen] = useState(false);
 
-	// Cerrar automáticamente al cambiar de ruta
 	useEffect(() => {
 		if (open) setOpen(false);
 	}, [pathname]);
+
+	if (session.status !== "authenticated") return null;
 
 	return (
 		<header className="sticky top-0 z-40 bg-gradient-to-r from-[color:var(--brand)] via-[color:var(--info)] to-[color:var(--warning)] text-white shadow-md">
@@ -56,22 +56,14 @@ export function Navbar() {
 					Mantenimiento SR
 				</Link>
 				<div className="ml-auto flex items-center gap-3 text-sm">
-					{session.status === "authenticated" ? (
-						<>
-							{user.name ? (
-								<span className="hidden sm:inline text-white/90">
-									{user.name}
-								</span>
-							) : null}
-							<Link href="/perfil" className="btn btn-ghost">
-								Perfil
-							</Link>
-						</>
-					) : (
-						<Link href="/signin" className="btn btn-primary">
-							Ingresar
-						</Link>
-					)}
+					{user.name ? (
+						<span className="hidden sm:inline text-white/90">
+							{user.name}
+						</span>
+					) : null}
+					<Link href="/perfil" className="btn btn-ghost">
+						Perfil
+					</Link>
 				</div>
 			</div>
 			<Sidebar open={open} onClose={() => setOpen(false)} />
