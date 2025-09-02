@@ -12,15 +12,22 @@ const PUBLIC_PATHS = [
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // Permitir recursos estáticos y API
+  const isStatic =
+    pathname.startsWith("/_next/") ||
+    pathname === "/favicon.ico" ||
+    pathname.startsWith("/api/") ||
+    /\.(png|jpg|jpeg|svg|ico|webp|gif|css|js|map)$/.test(pathname);
+  if (isStatic) return NextResponse.next();
+
   const isPublic = PUBLIC_PATHS.some(
     (p) => pathname === p || pathname.startsWith(p + "/")
   );
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-
-  if (token) return NextResponse.next();
-
-  // Permitir páginas públicas y recursos estáticos
   if (isPublic) return NextResponse.next();
+
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  if (token) return NextResponse.next();
 
   // Redirigir a login si no hay sesión
   const signin = new URL("/signin", req.url);
@@ -30,8 +37,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    // Todas las rutas excepto api, estáticos y assets
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(png|jpg|jpeg|svg|ico|webp|gif|css|js|map)).*)",
-  ],
+  matcher: ["/:path*"],
 };
