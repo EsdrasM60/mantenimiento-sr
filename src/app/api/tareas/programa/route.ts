@@ -58,8 +58,8 @@ export async function GET(req: Request) {
     .skip(skip)
     .limit(pageSize)
     .populate({ path: "fichaId", select: "titulo pdfId" })
-    .populate({ path: "voluntarioId", select: "nombre apellido" })
-    .populate({ path: "ayudanteId", select: "nombre apellido" })
+    .populate({ path: "voluntarioId", select: "nombre apellido shortId" })
+    .populate({ path: "ayudanteId", select: "nombre apellido shortId" })
     .lean();
 
   const [items, total] = await Promise.all([
