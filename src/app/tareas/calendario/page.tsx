@@ -1,8 +1,9 @@
 "use client";
 import useSWR from "swr";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { PLAN_FICHAS, type PlanEntry, type Categoria } from "@/data/fichas-plan";
+import { useSession } from "next-auth/react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -28,6 +29,30 @@ const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov"
 export default function TareasCalendarioPage() {
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [hidden, setHidden] = useState<Record<string, boolean>>({}); // key: titulo
+  const [openHidden, setOpenHidden] = useState(false);
+  const session = useSession();
+  const userKey = (session.data?.user?.email || "anon").toString();
+  const storageKey = `calHidden:${userKey}`;
+
+  // Cargar estado de ocultas desde localStorage
+  useEffect(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem(storageKey) : null;
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") setHidden(parsed);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey]);
+
+  // Guardar al cambiar
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined") localStorage.setItem(storageKey, JSON.stringify(hidden));
+    } catch {}
+  }, [hidden, storageKey]);
+
   const { data: programasResp } = useSWR<{ items: Programa[] }>(`/api/tareas/programa?page=1&pageSize=10000&year=${year}` , fetcher);
   const { data: fichasResp } = useSWR<{ items: Ficha[] }>(`/api/tareas/fichas?page=1&pageSize=10000&sort=alpha`, fetcher);
 
@@ -129,11 +154,11 @@ export default function TareasCalendarioPage() {
     );
   }
 
-  // Panel para restaurar fichas ocultas
   const ocultas = Object.entries(hidden).filter(([, v]) => v).map(([k]) => k);
 
   return (
     <section className="space-y-6">
+      {/* Header con tabs y controles */}
       <div className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b">
         <div className="flex items-center justify-between px-3 py-2">
           <div className="flex items-center gap-2 text-sm">
@@ -145,24 +170,32 @@ export default function TareasCalendarioPage() {
             <button className="border rounded px-2 py-1" onClick={() => setYear((y) => y - 1)}>◀</button>
             <div className="font-medium">{year}</div>
             <button className="border rounded px-2 py-1" onClick={() => setYear((y) => y + 1)}>▶</button>
+            {ocultas.length ? (
+              <div className="relative">
+                <button className="border rounded px-2 py-1" onClick={() => setOpenHidden((v) => !v)}>
+                  Fichas ocultas ({ocultas.length})
+                </button>
+                {openHidden ? (
+                  <div className="absolute right-0 mt-1 w-64 max-h-60 overflow-auto bg-white border rounded shadow z-10 p-1">
+                    {ocultas.map((t) => (
+                      <button key={t} className="w-full text-left px-2 py-1 hover:bg-neutral-100 rounded" onClick={() => { setHidden((h) => ({ ...h, [t]: false })); setOpenHidden(false); }}>
+                        {t} · mostrar
+                      </button>
+                    ))}
+                    <div className="border-t my-1" />
+                    <button className="w-full text-left px-2 py-1 hover:bg-neutral-100 rounded" onClick={() => { setHidden({}); setOpenHidden(false); }}>
+                      Mostrar todas
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
 
       <h1 className="text-2xl font-bold">Calendario anual de fichas</h1>
       <p className="text-sm text-neutral-600">Gris: planificado · Verde: completado · Asignado(s): IDs por mes</p>
-
-      {ocultas.length ? (
-        <div className="border rounded p-2 text-sm">
-          <div className="font-medium mb-1">Fichas ocultas</div>
-          <div className="flex flex-wrap gap-2">
-            {ocultas.map((t) => (
-              <button key={t} className="border rounded px-2 py-1" onClick={() => setHidden((h) => ({ ...h, [t]: false }))}>{t} · mostrar</button>
-            ))}
-            <button className="ml-auto border rounded px-2 py-1" onClick={() => setHidden({})}>Mostrar todas</button>
-          </div>
-        </div>
-      ) : null}
 
       {CATS.map((c) => (
         <Section key={c.key} cat={c} />
