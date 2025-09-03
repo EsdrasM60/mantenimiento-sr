@@ -15,19 +15,16 @@ export default async function DashboardPage() {
   const yy = now.getFullYear();
   const base = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:${process.env.PORT || 3000}`);
 
-  // Programa pendientes (ya existente)
-  const urlProg = `${base}/api/tareas/programa?page=1&pageSize=500&pending=1&year=${yy}`;
-  const resProg = await fetch(urlProg, { cache: "no-store" }).catch(() => null);
+  // Programa pendientes (compacto, sin count, menos pageSize)
+  const urlProg = `${base}/api/tareas/programa?page=1&pageSize=200&pending=1&year=${yy}&compact=1&count=0`;
+  const resProg = await fetch(urlProg, { next: { revalidate: 15 } }).catch(() => null);
   const dataProg = (await resProg?.json().catch(() => null)) as any;
   const programas = (dataProg?.items || []) as any[];
 
-  // Voluntarios para mapear nombres (reenviando cookies para autenticación)
+  // Voluntarios
   const hdrs = await headers();
   const cookieHeader = hdrs.get("cookie") ?? "";
-  const resVol = await fetch(`${base}/api/voluntarios`, {
-    cache: "no-store",
-    headers: { cookie: cookieHeader },
-  }).catch(() => null);
+  const resVol = await fetch(`${base}/api/voluntarios`, { next: { revalidate: 60 }, headers: { cookie: cookieHeader } }).catch(() => null);
   const volList = (await resVol?.json().catch(() => null)) as Array<{ id?: string; _id?: string; nombre?: string; apellido?: string }> | null;
   const volMap = new Map<string, string>();
   (Array.isArray(volList) ? volList : []).forEach((v) => {
@@ -36,8 +33,8 @@ export default async function DashboardPage() {
   });
 
   // Proyectos resumen
-  const urlPro = `${base}/api/proyectos?page=1&pageSize=200`;
-  const resPro = await fetch(urlPro, { cache: "no-store" }).catch(() => null);
+  const urlPro = `${base}/api/proyectos?page=1&pageSize=100`;
+  const resPro = await fetch(urlPro, { next: { revalidate: 30 } }).catch(() => null);
   const dataPro = (await resPro?.json().catch(() => null)) as { items?: any[] } | null;
   const proyectos = (dataPro?.items || []).map((p: any) => ({
     _id: String(p._id),
