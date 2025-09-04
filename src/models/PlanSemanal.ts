@@ -2,12 +2,23 @@ import mongoose, { Schema } from "mongoose";
 
 const AsignacionSchema = new Schema(
   {
-    congregacion: { type: String, required: true }, // nombre o id
-    semana: { type: Number, enum: [1, 2, 3, 4, 5], required: true },
+    // Semana del mes (1..5) en la que se realizará la limpieza
+    slot: { type: Number, enum: [1, 2, 3, 4, 5], required: true, index: true },
+
+    // Plantilla (1..5) que define el conjunto de tareas de la guía
+    plantilla: { type: Number, enum: [1, 2, 3, 4, 5] },
+
+    // Compatibilidad con datos previos (usado como plantilla)
+    semana: { type: Number, enum: [1, 2, 3, 4, 5] },
+
+    congregacion: { type: String },
     year: { type: Number, required: true, index: true },
     month: { type: Number, required: true, index: true }, // 1..12
     completado: { type: Boolean, default: false, index: true },
     notas: { type: String },
+
+    // Áreas seleccionadas a realizar en esta ocasión (coinciden con PLAN_SEMANAL[t].tareas[].area)
+    tareas: { type: [String], default: [] },
   },
   { _id: false }
 );
