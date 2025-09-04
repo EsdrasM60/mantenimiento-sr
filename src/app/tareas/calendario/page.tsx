@@ -161,7 +161,7 @@ export default function TareasCalendarioPage() {
       {/* Header con tabs y controles */}
       <div className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b">
         <div className="flex items-center justify-between px-3 py-2">
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2 text-sm overflow-x-auto whitespace-nowrap -mx-1 px-1">
             <Link href="/tareas" className="px-3 py-1 rounded border">Programa</Link>
             <Link href="/tareas/fichas" className="px-3 py-1 rounded border">Fichas</Link>
             <span className="px-3 py-1 rounded border bg-neutral-100">Calendario</span>

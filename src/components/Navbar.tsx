@@ -21,7 +21,7 @@ export function Navbar() {
 		<header className="sticky top-0 z-40 bg-gradient-to-r from-[color:var(--brand)] via-[color:var(--info)] to-[color:var(--warning)] text-white shadow-md">
 			<div className="mx-auto max-w-7xl px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3">
 				<button
-					className="p-2 rounded border border-white/30 inline-flex items-center justify-center hover:bg-white/10"
+					className="p-2 sm:p-2.5 rounded border border-white/30 inline-flex items-center justify-center hover:bg-white/10 touch-manipulation"
 					onClick={() => setOpen((v) => !v)}
 					aria-label={open ? "Cerrar menú" : "Abrir menú"}
 					aria-controls="app-sidebar"

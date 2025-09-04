@@ -7,20 +7,60 @@ export const runtime = "nodejs";
 
 export async function GET(req: Request, context: any) {
   const { params } = context as { params: { id: string } };
-  const _id = toObjectId(params.id);
+  const originalIdStr = params.id;
+  const _id = toObjectId(originalIdStr);
   if (!_id) return NextResponse.json({ error: "id inválido" }, { status: 400 });
 
   const url = new URL(req.url);
   const thumb = url.searchParams.get("thumb") === "1";
 
-  const bucket = await getGridFSBucket(thumb ? "uploads_thumb" : "uploads");
+  if (thumb) {
+    const bucketThumb = await getGridFSBucket("uploads_thumb");
+    // Buscar por _id (nuevo flujo)
+    let files = await bucketThumb.find({ _id }).toArray();
+    if (!files || files.length === 0) {
+      // Compatibilidad: buscar miniatura por metadata.thumbOf
+      files = await bucketThumb.find({ "metadata.thumbOf": originalIdStr }).limit(1).toArray();
+      if (files && files.length > 0) {
+        const file = files[0];
+        const stream = bucketThumb.openDownloadStream(file._id);
+        return new Response(stream as unknown as ReadableStream, {
+          headers: {
+            "Content-Type": file.contentType || "application/octet-stream",
+            "Cache-Control": "public, max-age=31536000, immutable",
+          },
+        });
+      }
+    } else {
+      const file = files[0];
+      const stream = bucketThumb.openDownloadStream(_id);
+      return new Response(stream as unknown as ReadableStream, {
+        headers: {
+          "Content-Type": file.contentType || "application/octet-stream",
+          "Cache-Control": "public, max-age=31536000, immutable",
+        },
+      });
+    }
+    // Si no hay miniatura, devolver original como fallback
+    const bucketOrig = await getGridFSBucket("uploads");
+    const f2 = await bucketOrig.find({ _id }).limit(1).toArray();
+    if (!f2 || f2.length === 0) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+    const file2 = f2[0];
+    const stream2 = bucketOrig.openDownloadStream(_id);
+    return new Response(stream2 as unknown as ReadableStream, {
+      headers: {
+        "Content-Type": file2.contentType || "application/octet-stream",
+        "Cache-Control": "public, max-age=31536000, immutable",
+      },
+    });
+  }
 
+  // No thumb: devolver original
+  const bucket = await getGridFSBucket("uploads");
   const files = await bucket.find({ _id }).toArray();
   if (!files || files.length === 0) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
-
   const file = files[0];
   const stream = bucket.openDownloadStream(_id);
-
   return new Response(stream as unknown as ReadableStream, {
     headers: {
       "Content-Type": file.contentType || "application/octet-stream",
