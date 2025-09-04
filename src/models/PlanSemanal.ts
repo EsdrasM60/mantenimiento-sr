@@ -27,7 +27,6 @@ const PlanSemanalSchema = new Schema(
   {
     year: { type: Number, required: true, index: true },
     month: { type: Number, required: true, index: true },
-    congregaciones: { type: [String], default: [] },
     asignaciones: { type: [AsignacionSchema], default: [] },
   },
   { timestamps: true }

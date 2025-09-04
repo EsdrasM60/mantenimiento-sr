@@ -21,13 +21,10 @@ export async function POST(req: Request) {
   }
   await connectMongo();
   const body = await req.json();
-  const { year, month, congregaciones } = body;
+  const { year, month } = body;
   if (!year || !month) return NextResponse.json({ error: "year y month requeridos" }, { status: 400 });
 
   const update: any = { $setOnInsert: { year, month } };
-  if (Array.isArray(congregaciones)) {
-    update.$set = { congregaciones };
-  }
 
   const doc = await PlanSemanal.findOneAndUpdate({ year, month }, update, { new: true, upsert: true }).lean();
   return NextResponse.json({ item: doc });

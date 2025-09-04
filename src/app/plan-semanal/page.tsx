@@ -42,6 +42,7 @@ export default function PlanSemanalPage() {
 	const [year, setYear] = useState<number>(now.getFullYear());
 	const [month, setMonth] = useState<number>(now.getMonth() + 1); // 1..12
 	const [doc, setDoc] = useState<PlanDoc | null>(null);
+	const [congs, setCongs] = useState<string[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [savingCong, setSavingCong] = useState(false);
 	const [newCong, setNewCong] = useState('');
@@ -72,6 +73,19 @@ export default function PlanSemanalPage() {
 			ignore = true;
 		};
 	}, [year, month]);
+
+	useEffect(() => {
+		let ignore = false;
+		const loadC = async () => {
+			try {
+				const r = await fetch('/api/config/congregaciones', { cache: 'no-store' });
+				const j = await r.json();
+				if (!ignore) setCongs(j.congregaciones || []);
+			} catch {}
+		};
+		loadC();
+		return () => { ignore = true; };
+	}, []);
 
 	const asignacionPorSlot = useMemo(() => {
 		const map = new Map<number, Asignacion>();
@@ -119,13 +133,13 @@ export default function PlanSemanalPage() {
 	const saveCongregaciones = async (list: string[]) => {
 		setSavingCong(true);
 		try {
-			const res = await fetch('/api/plan-semanal', {
+			const res = await fetch('/api/config/congregaciones', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ year, month, congregaciones: list }),
+				body: JSON.stringify({ congregaciones: list }),
 			});
 			const data = await res.json();
-			setDoc(data.item);
+			setCongs(data.congregaciones || []);
 			showMsg('Congregaciones guardadas');
 		} finally {
 			setSavingCong(false);
@@ -133,19 +147,18 @@ export default function PlanSemanalPage() {
 	};
 
 	const removeCong = (name: string) => {
-		if (!doc) return;
-		const next = doc.congregaciones.filter((c) => c !== name);
+		const next = congs.filter((c) => c !== name);
 		saveCongregaciones(next);
 	};
 
 	const addCong = () => {
 		const name = newCong.trim();
-		if (!name || !doc) return;
-		if (doc.congregaciones.includes(name)) {
+		if (!name) return;
+		if (congs.includes(name)) {
 			setNewCong('');
 			return;
 		}
-		saveCongregaciones([...(doc.congregaciones || []), name]);
+		saveCongregaciones([...(congs || []), name]);
 		setNewCong('');
 	};
 
@@ -211,7 +224,7 @@ export default function PlanSemanalPage() {
 					{savingCong && <span className="text-xs text-muted-foreground">Guardando…</span>}
 				</div>
 				<div className="flex gap-2 flex-wrap">
-					{(doc?.congregaciones || []).map((c) => (
+					{(congs || []).map((c) => (
 						<span key={c} className="inline-flex items-center gap-2 bg-gray-100 px-2 py-1 rounded">
 							{c}
 							<button
@@ -223,7 +236,7 @@ export default function PlanSemanalPage() {
 							</button>
 						</span>
 					))}
-					{doc && doc.congregaciones?.length === 0 && (
+					{congs.length === 0 && (
 						<span className="text-xs text-muted-foreground">Aún no hay congregaciones</span>
 					)}
 				</div>
@@ -281,7 +294,7 @@ export default function PlanSemanalPage() {
 										}}
 									>
 										<option value="">Asignar congregación…</option>
-										{(doc?.congregaciones || []).map((c) => (
+										{(congs || []).map((c) => (
 											<option key={c} value={c}>
 												{c}
 											</option>
