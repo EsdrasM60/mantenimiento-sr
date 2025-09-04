@@ -78,7 +78,7 @@ export default function PlanSemanalPage() {
 		let ignore = false;
 		const loadC = async () => {
 			try {
-				const r = await fetch('/api/config/congregaciones', { cache: 'no-store' });
+				const r = await fetch('/api/config/congregaciones/from-voluntarios', { cache: 'no-store' });
 				const j = await r.json();
 				if (!ignore) setCongs(j.congregaciones || []);
 			} catch {}
