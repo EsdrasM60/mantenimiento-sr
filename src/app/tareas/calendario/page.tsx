@@ -98,16 +98,16 @@ export default function TareasCalendarioPage() {
           <span>{cat.title}</span>
         </div>
         <div className="overflow-auto">
-          <table className="w-full text-xs">
+          <table className="w-full text-[11px] sm:text-xs min-w-[720px]">
             <thead>
               <tr className="bg-neutral-100">
-                <th className="text-left px-2 py-2 w-[220px]">Fichas</th>
-                <th className="text-left px-2 py-2 w-[100px]">Frecuencia</th>
+                <th className="text-left px-2 py-2 w-[180px] sm:w-[220px]">Fichas</th>
+                <th className="text-left px-2 py-2 w-[80px] sm:w-[100px]">Frecuencia</th>
                 {MESES.map((m) => (
-                  <th key={m} className="px-1 py-2 text-center w-10">{m}</th>
+                  <th key={m} className="px-1 py-2 text-center w-8 sm:w-10">{m}</th>
                 ))}
-                <th className="text-left px-2 py-2 w-[200px]">Asignado(s)</th>
-                <th className="w-[60px]"></th>
+                <th className="text-left px-2 py-2 w-[160px] sm:w-[200px]">Asignado(s)</th>
+                <th className="w-[50px] sm:w-[60px]"></th>
               </tr>
             </thead>
             <tbody>

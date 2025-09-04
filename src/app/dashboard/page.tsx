@@ -49,14 +49,20 @@ export default async function DashboardPage() {
   }));
 
   return (
-    <section className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
-      {(!allowed || allowed.has("dashboard:programas")) && (
-        <ProgramasPendientesWidget items={programas} isAdmin={isAdmin} userName={userName} />
-      )}
-      {(!allowed || allowed.has("dashboard:proyectos")) && (
-        <ProyectosWidget items={proyectos} isAdmin={isAdmin} userName={userName} />
-      )}
+    <section className="space-y-4 sm:space-y-6">
+      <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {(!allowed || allowed.has("dashboard:programas")) && (
+          <div>
+            <ProgramasPendientesWidget items={programas} isAdmin={isAdmin} userName={userName} />
+          </div>
+        )}
+        {(!allowed || allowed.has("dashboard:proyectos")) && (
+          <div>
+            <ProyectosWidget items={proyectos} isAdmin={isAdmin} userName={userName} />
+          </div>
+        )}
+      </div>
     </section>
   );
 }

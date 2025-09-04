@@ -5,6 +5,12 @@ import { Navbar } from "@/components/Navbar";
 import { Providers } from "@/components/Providers";
 import { auth } from "@/lib/auth";
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#0b1020",
+};
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -30,7 +36,7 @@ export default async function RootLayout({
         <div className="app-bg min-h-screen">
           <Providers session={session}>
             {session ? <Navbar /> : null}
-            <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
+            <main className="mx-auto max-w-7xl px-3 sm:px-6 py-4 sm:py-8">{children}</main>
           </Providers>
         </div>
       </body>
