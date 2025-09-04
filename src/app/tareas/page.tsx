@@ -1,6 +1,6 @@
 "use client";
 import useSWR from "swr";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, PlusIcon, XMarkIcon, CheckCircleIcon, InformationCircleIcon, PaperClipIcon } from "@heroicons/react/24/outline";
 
@@ -152,12 +152,12 @@ export default function TareasPage() {
 
   return (
     <section className="space-y-4">
-      <div className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b">
+      <div className="sticky top-0 z-40 bg-[color:var(--surface)]/90 backdrop-blur border-b">
         <div className="flex items-center justify-between px-3 py-2">
-          <div className="flex items-center gap-4 text-sm">
-            <span className="px-3 py-1 rounded border bg-neutral-100">Programa</span>
-            <Link href="/tareas/fichas" className="px-3 py-1 rounded border">Fichas</Link>
-            <Link href="/tareas/calendario" className="px-3 py-1 rounded border">Calendario</Link>
+          <div className="flex items-center gap-2 text-sm overflow-x-auto whitespace-nowrap -mx-1 px-1">
+            <span className="px-3 py-1 rounded border bg-white/5">Programa</span>
+            <a href="/tareas/fichas" className="px-3 py-1 rounded border">Fichas</a>
+            <a href="/tareas/calendario" className="px-3 py-1 rounded border">Calendario</a>
           </div>
         </div>
       </div>
@@ -166,17 +166,17 @@ export default function TareasPage() {
 
       {/* Controles de año */}
       <div className="flex items-center justify-center gap-2">
-        <button className="border rounded p-1" onClick={() => setYear((y) => y - 1)} aria-label="Anterior"><ChevronLeftIcon className="w-5 h-5" /></button>
+        <button className="border rounded p-2 min-w-10 min-h-10" onClick={() => setYear((y) => y - 1)} aria-label="Anterior"><ChevronLeftIcon className="w-5 h-5" /></button>
         <button className="border rounded px-3 py-1 inline-flex items-center gap-2" onClick={() => setYear(new Date().getFullYear())} title="Año actual">
           <CalendarIcon className="w-5 h-5" />
           <span className="font-medium">{year}</span>
         </button>
-        <button className="border rounded p-1" onClick={() => setYear((y) => y + 1)} aria-label="Siguiente"><ChevronRightIcon className="w-5 h-5" /></button>
+        <button className="border rounded p-2 min-w-10 min-h-10" onClick={() => setYear((y) => y + 1)} aria-label="Siguiente"><ChevronRightIcon className="w-5 h-5" /></button>
       </div>
 
       {/* Buscar */}
       <div>
-        <input className="w-full border rounded px-3 py-2" placeholder="Buscar..." value={q} onChange={(e)=>setQ(e.target.value)} />
+        <input className="w-full input" placeholder="Buscar..." value={q} onChange={(e)=>setQ(e.target.value)} />
       </div>
 
       {/* Listado por ficha */}
@@ -188,25 +188,25 @@ export default function TareasPage() {
             <div key={String(fid)}>
               <div className="flex items-center justify-between mb-2">
                 <div className="font-semibold uppercase tracking-wide">{f.titulo}</div>
-                <button className="inline-flex items-center gap-2 border rounded px-3 py-1" onClick={() => openForFicha(f)}>
+                <button className="inline-flex items-center gap-2 btn" onClick={() => openForFicha(f)}>
                   <PlusIcon className="w-5 h-5" /> Agregar nuevo
                 </button>
               </div>
               {items.length === 0 ? (
-                <div className="text-sm text-neutral-500">Sin registros en {year}.</div>
+                <div className="text-sm text-[color:var(--muted)]">Sin registros en {year}.</div>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {items.map((p) => {
                     const isDone = !!p.completadoFecha;
                     const hasAdj = !!(p as any).fichaId?.pdfId;
                     return (
-                      <div key={p._id} className="border rounded overflow-hidden cursor-pointer" onClick={() => openEdit(p)}>
-                        <div className="bg-neutral-200 px-3 py-2 text-sm flex items-start justify-between">
+                      <div key={p._id} className="card overflow-hidden cursor-pointer" onClick={() => openEdit(p)}>
+                        <div className="px-3 py-2 text-sm flex items-start justify-between bg-[color:var(--surface-2)] border-b border-[color:var(--border)]">
                           <div className="flex-1 min-w-0">
                             <div className="font-medium truncate">
                               {p.voluntarioId ? `${p.voluntarioId?.nombre} ${p.voluntarioId?.apellido}` : "(sin voluntario)"}
                             </div>
-                            <div className="text-xs text-neutral-700 truncate">
+                            <div className="text-xs text-[color:var(--muted)] truncate">
                               Ayudante {p.ayudanteId ? `· ${p.ayudanteId?.nombre} ${p.ayudanteId?.apellido}` : "(ninguno)"}
                             </div>
                           </div>
@@ -218,37 +218,35 @@ export default function TareasPage() {
                                 rel="noreferrer"
                                 onClick={(e) => e.stopPropagation()}
                                 title="Ver adjunto de la ficha"
-                                className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded border bg-white hover:bg-neutral-50"
+                                className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded border bg-[color:var(--surface)] hover:bg-white/5"
                               >
                                 <PaperClipIcon className="w-4 h-4" />
                                 Adjunto
                               </a>
                             )}
-                            <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded ${isDone ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
-                              {isDone ? <CheckCircleIcon className="w-4 h-4"/> : null}
+                            <span className={`badge ${isDone ? "badge-success" : "badge-warning"}`}>
                               {isDone ? "Completo" : "Pendiente"}
                             </span>
                           </div>
                         </div>
-                        <div className="px-3 py-3 text-sm bg-white">
+                        <div className="px-3 py-3 text-sm">
                           <div className="font-semibold flex items-center gap-2">
                             {isDone ? "Fecha que se completó" : "Debe cumplir con la asignación para"}
                           </div>
                           <div className="mb-2 text-lg font-bold">{fmt(p.completadoFecha || p.asignadoFecha)}</div>
                           {p.notas ? (
-                            <div className="text-neutral-700 whitespace-pre-wrap" style={{wordBreak:'break-word'}}>{p.notas}</div>
+                            <div className="text-[color:var(--foreground)]/90 whitespace-pre-wrap" style={{wordBreak:'break-word'}}>{p.notas}</div>
                           ) : null}
                           {Array.isArray((p as any).fotos) && (p as any).fotos.length ? (
                             <div className="mt-2 flex flex-wrap gap-2">
                               {(p as any).fotos.slice(0,6).map((id: string) => (
-                                <div key={id} className="w-12 h-12 border rounded overflow-hidden bg-neutral-100">
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <div key={id} className="w-12 h-12 border rounded overflow-hidden bg-[color:var(--surface-2)]">
                                   <img src={`/api/images/${id}?thumb=1`} alt="foto" className="w-full h-full object-cover" />
                                 </div>
                               ))}
                             </div>
                           ) : null}
-                          <div className="mt-2 text-xs text-neutral-500">Click para {isDone ? "editar" : "marcar como completo"}</div>
+                          <div className="mt-2 text-xs text-[color:var(--muted)]">Click para {isDone ? "editar" : "marcar como completo"}</div>
                         </div>
                       </div>
                     );
@@ -265,51 +263,48 @@ export default function TareasPage() {
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/60" onClick={() => setOpenCreate(false)} />
           <div className="absolute inset-0 flex items-center justify-center p-4">
-            <div className="bg-[#fbfbfa] rounded shadow-lg w-[95vw] max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
-              <div className="px-4 py-3 border-b flex items-center gap-2">
-                <div className="text-lg font-semibold uppercase">{currentFicha.titulo}</div>
-                <button className="ml-auto px-2 py-1 border rounded" onClick={() => setOpenCreate(false)} aria-label="Cerrar"><XMarkIcon className="w-5 h-5" /></button>
+            <div className="card w-[95vw] max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="px-4 py-3 card-header flex items-center gap-2">
+                <div className="font-semibold">Nuevo registro</div>
+                <button className="ml-auto btn btn-ghost" onClick={() => setOpenCreate(false)} aria-label="Cerrar">Cerrar</button>
               </div>
-              <form onSubmit={crearAsignacion} className="flex-1 overflow-auto p-4 bg-neutral-50">
-                {/* Adjuntos de la ficha */}
+              <form onSubmit={crearAsignacion} className="flex-1 overflow-auto p-4">
                 {currentFicha.pdfId ? (
-                  <div className="mb-4 border rounded bg-white p-3 flex items-center gap-3">
+                  <div className="mb-4 border rounded bg-[color:var(--surface-2)] p-3 flex items-center gap-3">
                     <div className="text-sm font-medium">Archivo de ficha:</div>
-                    <a className="text-blue-700 underline text-sm" href={`/api/tareas/fichas/file/${currentFicha.pdfId}`} target="_blank" rel="noreferrer">Abrir</a>
-                    <a className="text-blue-700 underline text-sm" href={`/api/tareas/fichas/file/${currentFicha.pdfId}`} download>Descargar</a>
+                    <a className="text-blue-400 underline text-sm" href={`/api/tareas/fichas/file/${currentFicha.pdfId}`} target="_blank" rel="noreferrer">Abrir</a>
+                    <a className="text-blue-400 underline text-sm" href={`/api/tareas/fichas/file/${currentFicha.pdfId}`} download>Descargar</a>
                   </div>
                 ) : null}
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <label className="block text-sm mb-1">Asignado a</label>
-                    <select name="voluntarioId" className="w-full border rounded px-2 py-1" required defaultValue="">
+                    <select name="voluntarioId" className="select" required defaultValue="">
                       <option value="" disabled>No seleccionado</option>
                       {voluntarios.map((v) => (<option key={v._id || v.id} value={v._id || v.id}>{v.nombre} {v.apellido}</option>))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm mb-1">Ayudante</label>
-                    <select name="ayudanteId" className="w-full border rounded px-2 py-1" defaultValue="">
+                    <select name="ayudanteId" className="select" defaultValue="">
                       <option value="">No seleccionado</option>
                       {voluntarios.map((v) => (<option key={v._id || v.id} value={v._id || v.id}>{v.nombre} {v.apellido}</option>))}
                     </select>
                   </div>
                 </div>
                 <div className="mt-4">
-                  <div className="text-sm text-neutral-800">Debe cumplir con la asignación para</div>
-                  <input type="date" name="asignadoFecha" className="border rounded px-2 py-1 mt-1" required />
-                </div>
-                {/* Eliminado campo de fecha completado en creación para que inicie en blanco */}
-                <div className="mt-4">
-                  <div className="text-sm text-neutral-800 mb-1">Notas</div>
-                  <textarea name="notas" className="w-full border rounded px-3 py-2 min-h-[120px] bg-white" />
+                  <div className="text-sm">Debe cumplir con la asignación para</div>
+                  <input type="date" name="asignadoFecha" className="input mt-1" required />
                 </div>
                 <div className="mt-4">
-                  <div className="text-sm text-neutral-800 mb-1">Fotos</div>
+                  <div className="text-sm mb-1">Notas</div>
+                  <textarea name="notas" className="w-full textarea min-h-[120px]" />
+                </div>
+                <div className="mt-4">
+                  <div className="text-sm mb-1">Fotos</div>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {createFotos.map((id) => (
-                      <div key={id} className="relative w-20 h-20 border rounded overflow-hidden">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <div key={id} className="relative w-20 h-20 border rounded overflow-hidden bg-[color:var(--surface-2)]">
                         <img src={`/api/images/${id}`} alt="foto" className="w-full h-full object-cover" />
                         <button type="button" className="absolute top-0 right-0 bg-black/60 text-white text-xs px-1" onClick={() => removeCreateFoto(id)}>x</button>
                       </div>
@@ -324,8 +319,8 @@ export default function TareasPage() {
                   }} />
                 </div>
                 <div className="px-0 pt-3 mt-4 border-t flex items-center gap-2 justify-end">
-                  <button className="rounded bg-foreground text-background px-4 py-2 disabled:opacity-50" disabled={saving} type="submit">{saving?"Guardando...":"Guardar"}</button>
-                  <button type="button" className="border rounded px-4 py-2" onClick={() => setOpenCreate(false)}>Cancelar</button>
+                  <button className="btn btn-primary disabled:opacity-50" disabled={saving} type="submit">{saving?"Guardando...":"Guardar"}</button>
+                  <button type="button" className="btn" onClick={() => setOpenCreate(false)}>Cancelar</button>
                 </div>
               </form>
             </div>
@@ -338,18 +333,17 @@ export default function TareasPage() {
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/60" onClick={() => setEditOpen(false)} />
           <div className="absolute inset-0 flex items-center justify-center p-4">
-            <div className="bg-white rounded shadow-lg w-[95vw] max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
-              <div className="px-4 py-3 border-b flex items-center gap-2">
+            <div className="card w-[95vw] max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="px-4 py-3 card-header flex items-center gap-2">
                 <div className="text-lg font-semibold uppercase">{(editItem.fichaId?.titulo || "").toString()}</div>
-                <button className="ml-auto px-2 py-1 border rounded" onClick={() => setEditOpen(false)} aria-label="Cerrar"><XMarkIcon className="w-5 h-5" /></button>
+                <button className="ml-auto btn btn-ghost" onClick={() => setEditOpen(false)} aria-label="Cerrar">Cerrar</button>
               </div>
               <form onSubmit={guardarEdicion} className="p-4 space-y-4 overflow-auto">
-                {/* Adjuntos de la ficha */}
                 {(editItem as any).fichaId?.pdfId ? (
-                  <div className="border rounded bg-white p-3 flex items-center gap-3">
+                  <div className="border rounded bg-[color:var(--surface-2)] p-3 flex items-center gap-3">
                     <div className="text-sm font-medium">Archivo de ficha:</div>
-                    <a className="text-blue-700 underline text-sm" href={`/api/tareas/fichas/file/${(editItem as any).fichaId.pdfId}`} target="_blank" rel="noreferrer">Abrir</a>
-                    <a className="text-blue-700 underline text-sm" href={`/api/tareas/fichas/file/${(editItem as any).fichaId.pdfId}`} download>Descargar</a>
+                    <a className="text-blue-400 underline text-sm" href={`/api/tareas/fichas/file/${(editItem as any).fichaId.pdfId}`} target="_blank" rel="noreferrer">Abrir</a>
+                    <a className="text-blue-400 underline text-sm" href={`/api/tareas/fichas/file/${(editItem as any).fichaId.pdfId}`} download>Descargar</a>
                   </div>
                 ) : null}
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -411,8 +405,8 @@ export default function TareasPage() {
                 </div>
 
                 <div className="pt-3 border-t flex items-center justify-end gap-2">
-                  <button type="submit" className="rounded bg-foreground text-background px-4 py-2">Guardar</button>
-                  <button type="button" className="border rounded px-4 py-2" onClick={() => setEditOpen(false)}>Cancelar</button>
+                  <button type="submit" className="btn btn-primary">Guardar</button>
+                  <button type="button" className="btn" onClick={() => setEditOpen(false)}>Cancelar</button>
                 </div>
               </form>
             </div>
