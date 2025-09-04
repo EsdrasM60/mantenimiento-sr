@@ -338,7 +338,13 @@ export default function ProyectosPage() {
       ) : (
         <ul className="space-y-3">
           {visibles.map((p) => (
-            <li key={p._id} className="card p-4">
+            <li
+              key={p._id}
+              className="card p-4 cursor-pointer"
+              onClick={() => setEdit(p)}
+              role="button"
+              aria-label={`Editar proyecto ${p.titulo}`}
+            >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 text-xs text-[color:var(--muted)] mb-1">
@@ -379,9 +385,9 @@ export default function ProyectosPage() {
                   </div>
                   <div className="flex items-center gap-2 mt-1 flex-wrap justify-end">
                     <span className={`status-${p.estado}`}>{p.estado.replace("_"," ")}</span>
-                    <button className="btn btn-ghost text-sm" title="Ver" onClick={()=>setView(p)}>Ver</button>
-                    <button className="btn btn-ghost text-sm" title="Editar" onClick={()=>setEdit(p)}>Editar</button>
-                    <button className="btn text-sm" style={{ borderColor: "#ef444455", color: "#ef4444" }} title="Eliminar" onClick={()=>remove(p._id)}>Eliminar</button>
+                    <button className="btn btn-ghost text-sm" title="Ver" onClick={(e)=>{ e.stopPropagation(); setView(p); }}>Ver</button>
+                    <button className="btn btn-ghost text-sm" title="Editar" onClick={(e)=>{ e.stopPropagation(); setEdit(p); }}>Editar</button>
+                    <button className="btn text-sm" style={{ borderColor: "#ef444455", color: "#ef4444" }} title="Eliminar" onClick={(e)=>{ e.stopPropagation(); remove(p._id); }}>Eliminar</button>
                   </div>
                 </div>
               </div>
@@ -456,7 +462,183 @@ export default function ProyectosPage() {
         </div>
       )}
 
-      {/* MODAL EDITAR y MODAL VER mantienen contenido pero heredan estilos base de tarjetas/inputs */}
+      {/* MODAL EDITAR */}
+      {edit && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setEdit(null)} />
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="card w-[95vw] max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="px-4 py-3 card-header flex items-center gap-2">
+                <div className="font-semibold">Editar proyecto</div>
+                <button className="ml-auto btn btn-ghost" title="Cerrar" onClick={() => setEdit(null)}>Cerrar</button>
+              </div>
+              <form onSubmit={saveEdit} className="p-4 space-y-4 overflow-auto">
+                <div className="grid gap-3">
+                  <input name="titulo" placeholder="Título" className="w-full input" defaultValue={edit?.titulo || ""} required onBlur={async (e)=>{ if (edit && e.currentTarget.value !== edit.titulo) { try { await patchProyecto(edit._id, { titulo: e.currentTarget.value }); } catch (err:any){ alert(`Error guardando título: ${err?.message||err}`);} } }} />
+                  <textarea name="descripcion" placeholder="Descripción" className="w-full textarea min-h-[100px]" defaultValue={edit?.descripcion || ""} onBlur={async (e)=>{ if (edit && e.currentTarget.value !== (edit.descripcion||"")) { try { await patchProyecto(edit._id, { descripcion: e.currentTarget.value||null }); } catch (err:any){ alert(`Error guardando descripción: ${err?.message||err}`);} } }} />
+                </div>
+                <div className="space-y-2">
+                  <div className="text-sm font-semibold">Estado</div>
+                  <div className="grid gap-2">
+                    {estadoOptions().map(opt => (
+                      <label key={opt.key} className="flex items-center gap-3 rounded-lg border border-[color:var(--border)] px-3 py-2.5 hover:bg-white/5 cursor-pointer" >
+                        <input type="radio" name="estado" value={opt.key} defaultChecked={opt.key === (edit?.estado || "PLANIFICADO")} className="accent-[color:var(--brand)]" onChange={async (e)=>{ if (edit) { try { await patchProyecto(edit._id, { estado: e.currentTarget.value }); } catch (err:any){ alert(`Error guardando estado: ${err?.message||err}`);} } }} />
+                        <span className={`${opt.color}`}>{opt.icon}</span>
+                        <span className="text-sm">{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-sm">Fecha de inicio</label>
+                    <input name="fechaInicio" type="text" placeholder="Fecha de inicio" className="w-full input" defaultValue={toDateInputValue(edit?.fechaInicio)} onFocus={(e)=>{ e.currentTarget.type = "date"; }} onBlur={async (e)=>{ if (!e.currentTarget.value) { e.currentTarget.type = "text"; } if (edit) { try { await patchProyecto(edit._id, { fechaInicio: e.currentTarget.value || null }); } catch (err:any){ alert(`Error guardando fecha inicio: ${err?.message||err}`);} } }} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm">Fecha de finalización</label>
+                    <input name="fechaFin" type="text" placeholder="Fecha de finalización" className="w-full input" defaultValue={toDateInputValue(edit?.fechaFin)} onFocus={(e)=>{ e.currentTarget.type = "date"; }} onBlur={async (e)=>{ if (!e.currentTarget.value) { e.currentTarget.type = "text"; } if (edit) { try { await patchProyecto(edit._id, { fechaFin: e.currentTarget.value || null }); } catch (err:any){ alert(`Error guardando fecha fin: ${err?.message||err}`);} } }} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-sm font-semibold">Asignación</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-sm">Voluntario</label>
+                      <select name="voluntarioId" className="select" defaultValue={edit?.voluntarioId || ""} onChange={async (e)=>{ if (edit) { try { await patchProyecto(edit._id, { voluntarioId: e.currentTarget.value || null }); } catch (err:any){ alert(`Error guardando voluntario: ${err?.message||err}`);} } }}>
+                        <option value="">Sin asignar</option>
+                        {voluntarios.map((v) => (<option key={v._id || v.id} value={v._id || v.id}>{v.nombre} {v.apellido}</option>))}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm">Ayudante</label>
+                      <select name="ayudanteId" className="select" defaultValue={edit?.ayudanteId || ""} onChange={async (e)=>{ if (edit) { try { await patchProyecto(edit._id, { ayudanteId: e.currentTarget.value || null }); } catch (err:any){ alert(`Error guardando ayudante: ${err?.message||err}`);} } }}>
+                        <option value="">Sin asignar</option>
+                        {voluntarios.map((v) => (<option key={v._id || v.id} value={v._id || v.id}>{v.nombre} {v.apellido}</option>))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Evidencias existentes */}
+                {Array.isArray(edit?.evidencias) && edit.evidencias.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="font-medium">Evidencias existentes</div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {edit.evidencias.map((ev, idx) => (
+                        <div key={idx} className="border border-[color:var(--border)] rounded p-2 space-y-2">
+                          <img src={`/api/images/${ev.thumbId || ev.mediaId}?thumb=1`} alt={ev.titulo || "evidencia"} className="w-full h-32 object-cover rounded" />
+                          {ev.titulo && <div className="text-sm truncate" title={ev.titulo}>{ev.titulo}</div>}
+                          <button type="button" className="text-xs" style={{ color: "#ef4444" }} title="Quitar evidencia" onClick={async ()=>{
+                            if (!edit) return;
+                            await patchProyecto(edit._id, { removeEvidenciaIds: [ev.mediaId] });
+                            setEdit(prev => {
+                              if (!prev) return prev as any;
+                              const list = (Array.isArray((prev as any).evidencias) ? (prev as any).evidencias.filter((x:any)=> String(x.mediaId) !== String(ev.mediaId)) : []);
+                              return ({ ...(prev as any), evidencias: list } as any);
+                            });
+                          }}>Quitar</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Agregar nuevas evidencias */}
+                <div className="space-y-2">
+                  <div className="font-medium">Agregar nuevas evidencias</div>
+                  <input ref={fileRefEdit} type="file" accept="image/*" multiple onChange={onUploadChangeEdit} className="hidden" />
+                  <button type="button" onClick={()=>fileRefEdit.current?.click()} className="btn btn-ghost" title="Seleccionar fotos">Agregar fotos</button>
+                  {evidenciasEditNew.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {evidenciasEditNew.map((ev, idx) => (
+                        <div key={idx} className="border border-[color:var(--border)] rounded p-2 space-y-2">
+                          <img src={ev.thumbUrl} alt={ev.titulo || "evidencia"} className="w-full h-32 object-cover rounded" />
+                          <input value={ev.titulo || ""} onChange={(e)=>actualizarTituloEdit(idx, e.target.value)} className="w-full input text-sm" placeholder="Título de la foto" />
+                          <textarea onChange={(e)=>actualizarPuntosEdit(idx, e.target.value)} className="w-full textarea text-sm min-h-[60px]" placeholder="Puntos a tratar (uno por línea)"></textarea>
+                          <button type="button" className="text-sm" style={{ color: "#ef4444" }} onClick={()=>quitarEvidenciaEdit(idx)}>Quitar</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Checklist editable */}
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">Lista de verificación</div>
+                  <div className="space-y-1">
+                    {editChecklistList.map((item, idx) => (
+                      <label key={`${item.text}-${idx}`} className="flex items-center gap-2 text-sm select-none" draggable onDragStart={() => setDragIndex(idx)} onDragOver={(e)=> e.preventDefault()} onDrop={async () => { if (dragIndex === null || dragIndex === idx || !edit) return; const list = [...editChecklistList]; const [moved] = list.splice(dragIndex, 1); list.splice(idx, 0, moved); setDragIndex(null); setEditChecklistList(list); setEdit(prev => (prev ? ({ ...(prev as any), checklist: list } as any) : prev)); await fetch(`/api/proyectos/${edit._id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ checklist: list }) }); mutate(); }} title="Arrastra para reordenar">
+                        <span className="cursor-grab text-[color:var(--muted)]">⠿</span>
+                        <input type="checkbox" checked={!!item.done} onChange={async (e) => { if (!edit) return; const checked = e.currentTarget.checked; const newList = editChecklistList.map((it, i) => i === idx ? { ...it, done: checked } : it); setEditChecklistList(newList); setEdit((prev) => (prev ? ({ ...(prev as any), checklist: newList } as any) : prev)); await fetch(`/api/proyectos/${edit._id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ checklist: newList }) }); mutate(); }} />
+                        <span className={item.done ? "line-through opacity-70" : ""}>{item.text}</span>
+                      </label>
+                    ))}
+                    {editChecklistList.length === 0 && (
+                      <div className="text-xs text-[color:var(--muted)]">Añade ítems y aparecerán aquí.</div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="text" value={editChecklistInput} onChange={(e)=> setEditChecklistInput(e.target.value)} className="flex-1 input" placeholder="Ej. Revisar bomba" />
+                    <button type="button" className="btn" title="Agregar ítem" onClick={async () => { if (!edit) return; const t = editChecklistInput.trim(); if (!t) return; const list = [...editChecklistList, { text: t, done: false }]; setEditChecklistList(list); setEditChecklistInput(""); setEdit(prev => (prev ? ({ ...(prev as any), checklist: list } as any) : prev)); await fetch(`/api/proyectos/${edit._id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ checklist: list }) }); mutate(); }}>➕</button>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <button type="submit" className="btn btn-primary">Guardar</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL VER */}
+      {view && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setView(null)} />
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="card w-[95vw] max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="px-4 py-3 card-header flex items-center gap-2">
+                <div className="font-semibold">{view.titulo}</div>
+                <button className="ml-auto btn btn-ghost" title="Cerrar" onClick={() => setView(null)}>Cerrar</button>
+              </div>
+              <div className="p-4 space-y-4 overflow-auto">
+                {view.descripcion && <p className="text-sm opacity-90">{view.descripcion}</p>}
+                {Array.isArray(view.evidencias) && view.evidencias.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {view.evidencias.map((ev, idx) => (
+                      <div key={idx} className="border border-[color:var(--border)] rounded p-3 space-y-2">
+                        <img src={`/api/images/${ev.thumbId || ev.mediaId}?thumb=1`} alt={ev.titulo || `Evidencia ${idx+1}`} className="w-full h-48 object-cover rounded" />
+                        {ev.titulo && <div className="font-medium text-sm truncate" title={ev.titulo}>{ev.titulo}</div>}
+                        {Array.isArray(ev.puntos) && ev.puntos.length > 0 && (
+                          <ul className="list-disc list-inside text-sm opacity-90">
+                            {ev.puntos.map((punto, i) => (<li key={i}>{punto}</li>))}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-[color:var(--muted)]">Sin evidencias.</div>
+                )}
+                {Array.isArray(view.checklist) && view.checklist.length > 0 && (
+                  <div>
+                    <div className="font-medium text-sm mb-2">Lista de verificación</div>
+                    <div className="space-y-1">
+                      {view.checklist.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-sm">
+                          <input type="checkbox" checked={item.done} disabled className="cursor-pointer" />
+                          <span className={item.done ? "line-through opacity-70" : ""}>{item.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
