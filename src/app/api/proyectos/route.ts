@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(pageSize)
-    .select({ titulo: 1, descripcion: 1, estado: 1, voluntarioId: 1, ayudanteId: 1, fechaInicio: 1, fechaFin: 1, checklist: 1 })
+    .select({ titulo: 1, descripcion: 1, estado: 1, voluntarioId: 1, ayudanteId: 1, fechaInicio: 1, fechaFin: 1, checklist: 1, evidencias: 1 })
     .lean();
 
   const total = await Project.countDocuments({});

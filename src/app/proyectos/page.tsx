@@ -28,6 +28,9 @@ export default function ProyectosPage() {
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<Project | null>(null);
   const [view, setView] = useState<Project | null>(null);
+  // Cargar detalle cuando se abre Ver (para asegurar evidencias)
+  const { data: viewFull } = useSWR(view?._id ? `/api/proyectos/${view._id}` : null, fetcher);
+  const viewData: Project | null = (viewFull as any) || view;
 
   const proyectos = useMemo(() => (data?.items || []), [data]);
   const voluntarios = useMemo(() => {
@@ -593,23 +596,26 @@ export default function ProyectosPage() {
       )}
 
       {/* MODAL VER */}
-      {view && (
+      {viewData && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/60" onClick={() => setView(null)} />
           <div className="absolute inset-0 flex items-center justify-center p-4">
             <div className="card w-[95vw] max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
               <div className="px-4 py-3 card-header flex items-center gap-2">
-                <div className="font-semibold">{view.titulo}</div>
+                <div className="font-semibold">{viewData.titulo}</div>
                 <button className="ml-auto btn btn-ghost" title="Cerrar" onClick={() => setView(null)}>Cerrar</button>
               </div>
               <div className="p-4 space-y-4 overflow-auto">
-                {view.descripcion && <p className="text-sm opacity-90">{view.descripcion}</p>}
-                {Array.isArray(view.evidencias) && view.evidencias.length > 0 ? (
+                {viewData.descripcion && <p className="text-sm opacity-90">{viewData.descripcion}</p>}
+                {Array.isArray(viewData.evidencias) && viewData.evidencias.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {view.evidencias.map((ev, idx) => (
+                    {viewData.evidencias.map((ev, idx) => (
                       <div key={idx} className="border border-[color:var(--border)] rounded p-3 space-y-2">
                         <img src={`/api/images/${ev.thumbId || ev.mediaId}?thumb=1`} alt={ev.titulo || `Evidencia ${idx+1}`} className="w-full h-48 object-cover rounded" />
-                        {ev.titulo && <div className="font-medium text-sm truncate" title={ev.titulo}>{ev.titulo}</div>}
+                        <div className="flex items-center justify-between gap-2">
+                          {ev.titulo ? <div className="font-medium text-sm truncate" title={ev.titulo}>{ev.titulo}</div> : <div />}
+                          <a className="btn btn-ghost text-sm" href={`/api/images/${ev.mediaId}`} target="_blank" rel="noreferrer" title="Ver original">Ver grande</a>
+                        </div>
                         {Array.isArray(ev.puntos) && ev.puntos.length > 0 && (
                           <ul className="list-disc list-inside text-sm opacity-90">
                             {ev.puntos.map((punto, i) => (<li key={i}>{punto}</li>))}
@@ -621,11 +627,11 @@ export default function ProyectosPage() {
                 ) : (
                   <div className="text-sm text-[color:var(--muted)]">Sin evidencias.</div>
                 )}
-                {Array.isArray(view.checklist) && view.checklist.length > 0 && (
+                {Array.isArray(viewData.checklist) && viewData.checklist.length > 0 && (
                   <div>
                     <div className="font-medium text-sm mb-2">Lista de verificación</div>
                     <div className="space-y-1">
-                      {view.checklist.map((item, idx) => (
+                      {viewData.checklist.map((item, idx) => (
                         <div key={idx} className="flex items-center gap-2 text-sm">
                           <input type="checkbox" checked={item.done} disabled className="cursor-pointer" />
                           <span className={item.done ? "line-through opacity-70" : ""}>{item.text}</span>

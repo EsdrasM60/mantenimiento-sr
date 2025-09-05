@@ -78,3 +78,17 @@ export async function DELETE(_req: Request, context: any) {
     return NextResponse.json({ error: "Unexpected" }, { status: 500 });
   }
 }
+
+// Nuevo: obtener proyecto por id (con evidencias)
+export async function GET(_req: Request, context: any) {
+  try {
+    await connectMongo();
+    const { params } = context as { params: { id: string } };
+    const { id } = params;
+    const doc = await Project.findById(id).lean();
+    if (!doc) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+    return NextResponse.json(doc);
+  } catch (e) {
+    return NextResponse.json({ error: "Unexpected" }, { status: 500 });
+  }
+}
