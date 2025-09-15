@@ -5,8 +5,8 @@ const ProgramaSchema = new Schema(
     fichaId: { type: Schema.Types.ObjectId, ref: "Ficha", required: true, index: true },
     voluntarioId: { type: Schema.Types.ObjectId, ref: "Volunteer", required: true, index: true },
     ayudanteId: { type: Schema.Types.ObjectId, ref: "Volunteer", required: false, index: true },
-    asignadoFecha: { type: Date, required: true, index: true },
-    completadoFecha: { type: Date, index: true },
+    asignadoFecha: { type: Date, required: true },
+    completadoFecha: { type: Date },
     notas: { type: String },
     fotos: [{ type: String }],
     created_by: { type: String },
@@ -14,6 +14,7 @@ const ProgramaSchema = new Schema(
   { timestamps: true }
 );
 
+// compound index for assigned/completed dates (keep instead of per-field duplicate)
 ProgramaSchema.index({ asignadoFecha: 1, completadoFecha: 1 });
 ProgramaSchema.index({ createdAt: -1 });
 
