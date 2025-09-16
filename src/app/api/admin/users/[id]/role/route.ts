@@ -4,6 +4,7 @@ import { authOptions, role as RoleEnum } from "@/lib/auth";
 import { db } from "@/lib/sqlite";
 import { z } from "zod";
 import { connectMongo } from "@/lib/mongo";
+import { getModelForTenant } from "@/lib/tenant";
 
 const roleSchema = z.object({
   role: z.enum(["ADMIN", "COORDINADOR", "USER"]),
@@ -26,8 +27,15 @@ export async function POST(req: Request, context: any) {
 
   try {
     if (process.env.MONGODB_URI) {
-      await connectMongo();
-      const { default: User } = await import("@/models/User");
+      const tenantSlug = req.headers.get('x-tenant-slug') || undefined;
+      let User: any;
+      try {
+        User = await getModelForTenant("@/models/User", "User", tenantSlug);
+      } catch (e) {
+        await connectMongo();
+        const mod = await import("@/models/User");
+        User = mod.default;
+      }
       const doc = await User.findByIdAndUpdate(id, { role }, { new: true });
       if (!doc) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
       return NextResponse.json({ ok: true });

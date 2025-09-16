@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getServerSession } from "next-auth";
 import { db } from "@/lib/sqlite";
 import { connectMongo } from "@/lib/mongo";
+import { connectTenantDb } from "@/lib/tenant";
 
 export const role = {
   ADMIN: "ADMIN",
@@ -21,10 +22,28 @@ type SlimUser = { role: Role | null; approved: boolean; name?: string | null; se
 const credentialsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
+  tenant: z.string().optional(),
 });
 
-async function getUserByEmail(email: string) {
+async function getUserByEmail(email: string, tenant?: string) {
   if (process.env.MONGODB_URI) {
+    if (tenant) {
+      // Conectar a la DB del tenant
+      const conn = await connectTenantDb({ slug: tenant } as any);
+      const m = await import("@/models/User");
+      const User = conn.model('User', (m.default as any).schema);
+      const u = await User.findOne({ email }).lean();
+      if (!u || Array.isArray(u)) return null;
+      return {
+        id: String((u as any)._id),
+        name: (u as any).name as string | null,
+        email: (u as any).email as string,
+        passwordHash: (u as any).passwordHash as string | null,
+        role: (u as any).role as Role | null,
+        emailVerified: (u as any).emailVerified ? 1 : 0,
+        tenant: tenant,
+      };
+    }
     await connectMongo();
     const { default: User } = await import("@/models/User");
     const u = await User.findOne({ email }).lean();
@@ -48,8 +67,20 @@ async function getUserByEmail(email: string) {
   return row ?? null;
 }
 
-async function getRoleAndApproved(email: string): Promise<SlimUser> {
+async function getRoleAndApproved(email: string, tenant?: string): Promise<SlimUser> {
   if (process.env.MONGODB_URI) {
+    if (tenant) {
+      const conn = await connectTenantDb({ slug: tenant } as any);
+      const m = await import("@/models/User");
+      const User = conn.model('User', (m.default as any).schema);
+      const u = await User.findOne({ email }).select({ role: 1, emailVerified: 1, name: 1, settings: 1 }).lean();
+      return {
+        role: (u as any)?.role as Role | null,
+        approved: !!(u as any)?.emailVerified,
+        name: (u as any)?.name ?? null,
+        settings: (u as any)?.settings ?? {},
+      };
+    }
     await connectMongo();
     const { default: User } = await import("@/models/User");
     const u = await User.findOne({ email }).select({ role: 1, emailVerified: 1, name: 1, settings: 1 }).lean();
@@ -75,13 +106,14 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        tenant: { label: "Tenant", type: "text" },
       },
       authorize: async (raw) => {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
-        const { email, password } = parsed.data;
+        const { email, password, tenant } = parsed.data;
 
-        const row = await getUserByEmail(email);
+        const row = await getUserByEmail(email, tenant);
         if (!row || !row.passwordHash) return null;
         const ok = await compare(password, row.passwordHash);
         if (!ok) return null;
@@ -89,13 +121,14 @@ export const authOptions: NextAuthOptions = {
           // mensaje personalizado en ?error=
           throw new Error("PendienteAprobacion");
         }
-        const { role: r, name, settings } = await getRoleAndApproved(email);
+        const { role: r, name, settings } = await getRoleAndApproved(email, tenant);
         return {
           id: row.id,
           email: row.email,
           name: name ?? row.name ?? undefined,
           role: r ?? row.role ?? role.VOLUNTARIO,
           settings: settings ?? {},
+          tenant: tenant ?? undefined,
         } as any;
       },
     }),
@@ -109,10 +142,12 @@ export const authOptions: NextAuthOptions = {
         token.name = (user as any).name ?? token.name;
         // @ts-ignore
         token.settings = (user as any).settings ?? token.settings ?? {};
+        // @ts-ignore
+        if ((user as any).tenant) token.tenant = (user as any).tenant;
       }
       if (token?.email) {
         try {
-          const { role: r, approved, name, settings } = await getRoleAndApproved(token.email);
+          const { role: r, approved, name, settings } = await getRoleAndApproved(token.email, (token as any).tenant);
           // @ts-ignore
           token.role = r ?? token.role ?? role.VOLUNTARIO;
           // @ts-ignore
@@ -132,6 +167,8 @@ export const authOptions: NextAuthOptions = {
       s.user.approved = (token as any).approved ?? false;
       if (token && (token as any).name) s.user.name = String((token as any).name);
       s.user.settings = (token as any).settings ?? {};
+      // exponer tenant en session
+      if ((token as any).tenant) s.user.tenant = (token as any).tenant;
       return session;
     },
   },

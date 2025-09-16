@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { connectMongo } from "@/lib/mongo";
 import bcrypt from "bcryptjs";
+import { getModelForTenant } from "@/lib/tenant";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -14,8 +15,19 @@ export async function POST(req: Request) {
   if (!next || next.length < 6) return NextResponse.json({ error: "La nueva contraseña debe tener al menos 6 caracteres" }, { status: 400 });
   if (next !== confirm) return NextResponse.json({ error: "Las contraseñas no coinciden" }, { status: 400 });
 
-  await connectMongo();
-  const { default: User } = await import("@/models/User");
+  // determinar tenant desde session o header
+  // @ts-ignore
+  const tenant = (session as any)?.user?.tenant as string | undefined;
+
+  let User: any;
+  try {
+    User = await getModelForTenant("@/models/User", "User", tenant);
+  } catch (e) {
+    await connectMongo();
+    const mod = await import("@/models/User");
+    User = mod.default;
+  }
+
   const u = (await User.findOne({ email: session.user.email }).lean()) as any;
   if (!u) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
   const ok = u.passwordHash ? await bcrypt.compare(current, u.passwordHash) : false;

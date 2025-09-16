@@ -4,11 +4,13 @@ import { db } from "@/lib/sqlite";
 import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
 import { connectMongo } from "@/lib/mongo";
+import { getModelForTenant } from "@/lib/tenant";
 
 const schema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6),
+  tenant: z.string().optional(),
 });
 
 function splitName(full: string) {
@@ -31,12 +33,42 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
   }
-  const { name, email, password } = parsed.data;
+  const { name, email, password, tenant } = parsed.data;
 
   const password_hash = await bcrypt.hash(password, 10);
 
   try {
     if (process.env.MONGODB_URI) {
+      // si tenant provisto, crear en tenant DB
+      if (tenant) {
+        try {
+          const User = await getModelForTenant("@/models/User", "User", tenant);
+          const exists = await User.findOne({ email }).lean();
+          if (exists) return NextResponse.json({ error: "El correo ya está registrado" }, { status: 409 });
+          await User.create({ name, email, passwordHash: password_hash, role: "VOLUNTARIO", emailVerified: false });
+
+          // crear voluntario en tenant
+          try {
+            const Volunteer = await getModelForTenant("@/models/Volunteer", "Volunteer", tenant);
+            const vExists = await Volunteer.findOne({ email }).lean();
+            if (!vExists) {
+              const { nombre, apellido } = splitName(name || email);
+              let shortId = makeShortId(`${nombre}-${apellido}-${Date.now()}`);
+              for (let i = 0; i < 5; i++) {
+                const c = await Volunteer.findOne({ shortId }).lean();
+                if (!c) break;
+                shortId = makeShortId(`${nombre}-${apellido}-${Date.now()}-${i}`);
+              }
+              await Volunteer.create({ nombre, apellido, email, shortId });
+            }
+          } catch {}
+
+          return NextResponse.json({ ok: true });
+        } catch (e: any) {
+          return NextResponse.json({ error: "Error registrando en tenant" }, { status: 500 });
+        }
+      }
+
       await connectMongo();
       const { default: User } = await import("@/models/User");
       const exists = await User.findOne({ email }).lean();

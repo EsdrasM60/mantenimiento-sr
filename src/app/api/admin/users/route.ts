@@ -5,8 +5,9 @@ import { db } from "@/lib/sqlite";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { connectMongo } from "@/lib/mongo";
+import { getModelForTenant } from "@/lib/tenant";
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   // @ts-ignore
   const r = session?.user?.role as string | undefined;
@@ -15,19 +16,30 @@ export async function GET() {
   }
 
   if (process.env.MONGODB_URI) {
-    await connectMongo();
-    const { default: User } = await import("@/models/User");
-    const rows = await User.find({}, { name: 1, email: 1, role: 1, emailVerified: 1, createdAt: 1 })
-      .sort({ createdAt: -1 })
-      .lean();
-    return NextResponse.json(rows.map((u: any) => ({
-      id: String(u._id),
-      name: u.name,
-      email: u.email,
-      role: u.role,
-      emailVerified: !!u.emailVerified,
-      createdAt: u.createdAt,
-    })));
+    const tenantSlug = req.headers.get('x-tenant-slug') || undefined;
+    try {
+      let User: any;
+      try {
+        User = await getModelForTenant("@/models/User", "User", tenantSlug);
+      } catch (e) {
+        await connectMongo();
+        const mod = await import("@/models/User");
+        User = mod.default;
+      }
+      const rows = await User.find({}, { name: 1, email: 1, role: 1, emailVerified: 1, createdAt: 1 })
+        .sort({ createdAt: -1 })
+        .lean();
+      return NextResponse.json(rows.map((u: any) => ({
+        id: String(u._id),
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        emailVerified: !!u.emailVerified,
+        createdAt: u.createdAt,
+      })));
+    } catch (e: any) {
+      return NextResponse.json({ error: "Error consultando" }, { status: 500 });
+    }
   }
 
   const rows = db
@@ -44,6 +56,7 @@ const createSchema = z.object({
   password: z.string().min(6, "Mínimo 6 caracteres"),
   role: z.enum(["ADMIN", "COORDINADOR", "VOLUNTARIO"]).default("VOLUNTARIO"),
   approved: z.boolean().default(true),
+  tenant: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -60,11 +73,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
   }
 
-  const { name, email, password, role, approved } = parsed.data;
+  const { name, email, password, role, approved, tenant } = parsed.data;
   const password_hash = bcrypt.hashSync(password, 10);
 
   try {
     if (process.env.MONGODB_URI) {
+      if (tenant) {
+        try {
+          const User = await getModelForTenant("@/models/User", "User", tenant);
+          const exists = await User.findOne({ email }).lean();
+          if (exists) return NextResponse.json({ error: "El correo ya está registrado" }, { status: 409 });
+          const created = await User.create({ name, email, passwordHash: password_hash, role, emailVerified: approved });
+          return NextResponse.json({ id: String(created._id), name, email, role, emailVerified: approved, createdAt: created.createdAt }, { status: 201 });
+        } catch (e: any) {
+          return NextResponse.json({ error: "Error creando usuario en tenant" }, { status: 500 });
+        }
+      }
+
       await connectMongo();
       const { default: User } = await import("@/models/User");
       const exists = await User.findOne({ email }).lean();

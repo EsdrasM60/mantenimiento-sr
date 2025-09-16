@@ -3,6 +3,7 @@ import { db } from "@/lib/sqlite";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { connectMongo } from "@/lib/mongo";
+import { getModelForTenant } from "@/lib/tenant";
 
 const schema = z.object({
   nombre: z.string().min(2),
@@ -21,14 +22,22 @@ function makeShortId(seed: string) {
   return String(100 + (h % 900));
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   if (process.env.MONGODB_URI) {
     try {
-      await connectMongo();
-      const { default: Volunteer } = await import("@/models/Volunteer");
+      const tenantSlug = req.headers.get('x-tenant-slug') || undefined;
+      let Volunteer: any;
+      try {
+        Volunteer = await getModelForTenant("@/models/Volunteer", "Volunteer", tenantSlug);
+      } catch (e) {
+        await connectMongo();
+        const mod = await import("@/models/Volunteer");
+        Volunteer = mod.default;
+      }
+
       const docs = await Volunteer.find({})
         .collation({ locale: "es", strength: 1 })
         .sort({ apellido: 1, nombre: 1 })
@@ -76,8 +85,16 @@ export async function POST(req: Request) {
   // Chequeo de duplicados por nombre+apellido (case-insensitive)
   if (process.env.MONGODB_URI) {
     try {
-      await connectMongo();
-      const { default: Volunteer } = await import("@/models/Volunteer");
+      const tenantSlug = req.headers.get('x-tenant-slug') || undefined;
+      let Volunteer: any;
+      try {
+        Volunteer = await getModelForTenant("@/models/Volunteer", "Volunteer", tenantSlug);
+      } catch (e) {
+        await connectMongo();
+        const mod = await import("@/models/Volunteer");
+        Volunteer = mod.default;
+      }
+
       const dup = await Volunteer.findOne({ nombre: new RegExp(`^${nombre}$`, "i"), apellido: new RegExp(`^${apellido}$`, "i") }).lean();
       if (dup) {
         return NextResponse.json({ error: "Ya existe un voluntario con ese nombre y apellido" }, { status: 409 });

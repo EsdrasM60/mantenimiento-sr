@@ -4,6 +4,7 @@ import { connectMongo } from "@/lib/mongo";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/sqlite";
 import { getGridFSBucket, toObjectId } from "@/lib/gridfs";
+import { getModelForTenant } from "@/lib/tenant";
 
 const checklistItem = z.object({ text: z.string().min(1), done: z.boolean().optional().default(false) });
 const schema = z.object({
@@ -30,36 +31,48 @@ export async function GET(req: Request) {
   const skip = (page - 1) * pageSize;
 
   if (process.env.MONGODB_URI) {
-    await connectMongo();
-    const { default: Ficha } = await import("@/models/Ficha");
-    const [total, docs] = await Promise.all([
-      Ficha.countDocuments({}),
-      Ficha.find({})
-        .collation({ locale: "es", strength: 1 })
-        .sort(sort === "alpha" ? { titulo: 1 } : { createdAt: -1 })
-        .skip(skip)
-        .limit(pageSize)
-        .lean(),
-    ]);
-    return NextResponse.json({
-      items: docs.map((d: any) => ({
-        id: String(d._id),
-        titulo: d.titulo,
-        descripcion: d.descripcion ?? null,
-        prioridad: d.prioridad,
-        estado: d.estado,
-        asignado_a: d.asignado_a ?? null,
-        vencimiento: d.vencimiento ?? null,
-        createdAt: d.createdAt,
-        pdfId: d.pdfId ? String(d.pdfId) : null,
-        instrucciones: d.instrucciones ?? null,
-        notas: d.notas ?? null,
-        checklist: Array.isArray(d.checklist) ? d.checklist.map((it: any) => ({ text: String(it.text), done: !!it.done })) : [],
-      })),
-      total,
-      page,
-      pageSize,
-    });
+    try {
+      const tenantSlug = req.headers.get('x-tenant-slug') || undefined;
+      let Ficha: any;
+      try {
+        Ficha = await getModelForTenant("@/models/Ficha", "Ficha", tenantSlug);
+      } catch (e) {
+        await connectMongo();
+        const mod = await import("@/models/Ficha");
+        Ficha = mod.default;
+      }
+
+      const [total, docs] = await Promise.all([
+        Ficha.countDocuments({}),
+        Ficha.find({})
+          .collation({ locale: "es", strength: 1 })
+          .sort(sort === "alpha" ? { titulo: 1 } : { createdAt: -1 })
+          .skip(skip)
+          .limit(pageSize)
+          .lean(),
+      ]);
+      return NextResponse.json({
+        items: docs.map((d: any) => ({
+          id: String(d._id),
+          titulo: d.titulo,
+          descripcion: d.descripcion ?? null,
+          prioridad: d.prioridad,
+          estado: d.estado,
+          asignado_a: d.asignado_a ?? null,
+          vencimiento: d.vencimiento ?? null,
+          createdAt: d.createdAt,
+          pdfId: d.pdfId ? String(d.pdfId) : null,
+          instrucciones: d.instrucciones ?? null,
+          notas: d.notas ?? null,
+          checklist: Array.isArray(d.checklist) ? d.checklist.map((it: any) => ({ text: String(it.text), done: !!it.done })) : [],
+        })),
+        total,
+        page,
+        pageSize,
+      });
+    } catch (e: any) {
+      return NextResponse.json({ error: "Error consultando" }, { status: 500 });
+    }
   }
 
   const totalRow = db.prepare("SELECT COUNT(*) as c FROM fichas").get() as { c: number };
@@ -88,26 +101,37 @@ export async function POST(req: Request) {
   const { titulo, descripcion, prioridad, estado, asignado_a, vencimiento, pdfId, instrucciones, notas, checklist } = parsed.data;
 
   if (process.env.MONGODB_URI) {
-    await connectMongo();
-    const { default: Ficha } = await import("@/models/Ficha");
-    const payload: any = {
-      titulo,
-      descripcion: descripcion ?? null,
-      prioridad,
-      estado,
-      asignado_a: asignado_a ?? null,
-      vencimiento: vencimiento ? new Date(vencimiento) : null,
-      created_by: session.user?.email ?? null,
-      instrucciones: instrucciones ?? null,
-      notas: notas ?? null,
-      checklist: Array.isArray(checklist) ? checklist.map((c) => ({ text: c.text, done: !!c.done })) : [],
-    };
-    if (pdfId) {
-      const _id = toObjectId(pdfId);
-      if (_id) payload.pdfId = _id;
+    try {
+      const tenantSlug = req.headers.get('x-tenant-slug') || undefined;
+      let Ficha: any;
+      try {
+        Ficha = await getModelForTenant("@/models/Ficha", "Ficha", tenantSlug);
+      } catch (e) {
+        await connectMongo();
+        const mod = await import("@/models/Ficha");
+        Ficha = mod.default;
+      }
+      const payload: any = {
+        titulo,
+        descripcion: descripcion ?? null,
+        prioridad,
+        estado,
+        asignado_a: asignado_a ?? null,
+        vencimiento: vencimiento ? new Date(vencimiento) : null,
+        created_by: session.user?.email ?? null,
+        instrucciones: instrucciones ?? null,
+        notas: notas ?? null,
+        checklist: Array.isArray(checklist) ? checklist.map((c) => ({ text: c.text, done: !!c.done })) : [],
+      };
+      if (pdfId) {
+        const _id = toObjectId(pdfId);
+        if (_id) payload.pdfId = _id;
+      }
+      const doc = await Ficha.create(payload);
+      return NextResponse.json({ ok: true, id: String(doc._id) });
+    } catch (e: any) {
+      return NextResponse.json({ error: "Error creando" }, { status: 500 });
     }
-    const doc = await Ficha.create(payload);
-    return NextResponse.json({ ok: true, id: String(doc._id) });
   }
 
   const id = crypto.randomUUID();

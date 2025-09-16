@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { connectMongo } from "@/lib/mongo";
+import { getTenantBySlug, connectTenantDb, slugFromHostOrPath, getModelForTenant } from "@/lib/tenant";
 
 export const runtime = "nodejs";
 
@@ -21,8 +22,27 @@ export async function POST(req: Request) {
 
     if (!email || !password) return NextResponse.json({ error: "Faltan email o password" }, { status: 400 });
 
-    await connectMongo();
-    const { default: User } = await import("@/models/User");
+    // Si viene tenant en header o se infiere del host/path, conectar a su DB
+    const tenantSlug = req.headers.get("x-tenant-slug");
+    let User: any = null;
+    if (tenantSlug) {
+      // prefer the convenience helper which returns a model bound to the tenant connection
+      User = await getModelForTenant("@/models/User", "User", tenantSlug);
+    } else {
+      // intentar inferir
+      // @ts-ignore
+      const fakeReq: any = { headers: { get: (k: string) => (req.headers.get(k)) }, nextUrl: new URL(req.url) } as any;
+      const inferred = slugFromHostOrPath(fakeReq as any);
+      if (inferred) {
+        User = await getModelForTenant("@/models/User", "User", inferred);
+      }
+    }
+
+    if (!User) {
+      await connectMongo();
+      const mod = await import("@/models/User");
+      User = mod.default;
+    }
 
     const passwordHash = bcrypt.hashSync(password, 10);
 
@@ -50,8 +70,21 @@ export async function GET(req: Request) {
     const password = url.searchParams.get("password") || process.env.ADMIN_PASSWORD;
     if (!email || !password) return NextResponse.json({ error: "Faltan email o password" }, { status: 400 });
 
-    await connectMongo();
-    const { default: User } = await import("@/models/User");
+    // similar a POST: intentar tenant
+    const tenantSlug = req.headers.get("x-tenant-slug");
+    let User: any = null;
+    if (tenantSlug) {
+      const tenant = await getTenantBySlug(tenantSlug);
+      if (!tenant) return NextResponse.json({ error: "Tenant no encontrado" }, { status: 404 });
+      const conn = await connectTenantDb(tenant as any);
+      User = conn.model('User', (await import('@/models/User')).default.schema);
+    }
+
+    if (!User) {
+      await connectMongo();
+      const mod = await import("@/models/User");
+      User = mod.default;
+    }
 
     const passwordHash = bcrypt.hashSync(password, 10);
     const updated = await User.findOneAndUpdate(

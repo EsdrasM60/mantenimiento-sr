@@ -3,6 +3,7 @@ import { auth, role as RoleEnum } from "@/lib/auth";
 import { db } from "@/lib/sqlite";
 import { z } from "zod";
 import { connectMongo } from "@/lib/mongo";
+import { getModelForTenant } from "@/lib/tenant";
 
 const patchSchema = z.object({
   nombre: z.string().min(2).optional(),
@@ -22,21 +23,32 @@ export async function GET(_req: Request, context: any) {
 
   try {
     if (process.env.MONGODB_URI) {
-      await connectMongo();
-      const { default: Volunteer } = await import("@/models/Volunteer");
-      const doc: any = await Volunteer.findById(id).lean();
-      if (!doc) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
-      return NextResponse.json({
-        id: String(doc._id),
-        shortId: doc.shortId || null,
-        nombre: doc.nombre,
-        apellido: doc.apellido,
-        telefono: doc.telefono ?? null,
-        congregacion: doc.congregacion ?? null,
-        a2: !!doc.a2,
-        trabajo_altura: !!doc.trabajo_altura,
-        createdAt: doc.createdAt,
-      });
+      try {
+        const tenantSlug = _req.headers.get('x-tenant-slug') || undefined;
+        let Volunteer: any;
+        try {
+          Volunteer = await getModelForTenant("@/models/Volunteer", "Volunteer", tenantSlug);
+        } catch (e) {
+          await connectMongo();
+          const mod = await import("@/models/Volunteer");
+          Volunteer = mod.default;
+        }
+        const doc: any = await Volunteer.findById(id).lean();
+        if (!doc) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+        return NextResponse.json({
+          id: String(doc._id),
+          shortId: doc.shortId || null,
+          nombre: doc.nombre,
+          apellido: doc.apellido,
+          telefono: doc.telefono ?? null,
+          congregacion: doc.congregacion ?? null,
+          a2: !!doc.a2,
+          trabajo_altura: !!doc.trabajo_altura,
+          createdAt: doc.createdAt,
+        });
+      } catch (e: any) {
+        return NextResponse.json({ error: "Error consultando" }, { status: 500 });
+      }
     }
 
     const row = db
@@ -64,21 +76,32 @@ export async function PATCH(req: Request, context: any) {
 
   try {
     if (process.env.MONGODB_URI) {
-      await connectMongo();
-      const { default: Volunteer } = await import("@/models/Volunteer");
-      const doc: any = await Volunteer.findByIdAndUpdate(id, updates, { new: true });
-      if (!doc) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
-      return NextResponse.json({
-        id: String(doc._id),
-        shortId: doc.shortId || null,
-        nombre: doc.nombre,
-        apellido: doc.apellido,
-        telefono: doc.telefono ?? null,
-        congregacion: doc.congregacion ?? null,
-        a2: !!doc.a2,
-        trabajo_altura: !!doc.trabajo_altura,
-        createdAt: doc.createdAt,
-      });
+      try {
+        const tenantSlug = req.headers.get('x-tenant-slug') || undefined;
+        let Volunteer: any;
+        try {
+          Volunteer = await getModelForTenant("@/models/Volunteer", "Volunteer", tenantSlug);
+        } catch (e) {
+          await connectMongo();
+          const mod = await import("@/models/Volunteer");
+          Volunteer = mod.default;
+        }
+        const doc: any = await Volunteer.findByIdAndUpdate(id, updates, { new: true });
+        if (!doc) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+        return NextResponse.json({
+          id: String(doc._id),
+          shortId: doc.shortId || null,
+          nombre: doc.nombre,
+          apellido: doc.apellido,
+          telefono: doc.telefono ?? null,
+          congregacion: doc.congregacion ?? null,
+          a2: !!doc.a2,
+          trabajo_altura: !!doc.trabajo_altura,
+          createdAt: doc.createdAt,
+        });
+      } catch (e: any) {
+        return NextResponse.json({ error: "Error actualizando" }, { status: 500 });
+      }
     } else {
       const run = (sql: string, val: any) => db.prepare(sql).run(val, id);
       if (updates.nombre !== undefined) run("UPDATE volunteers SET nombre = ? WHERE id = ?", updates.nombre);
@@ -114,11 +137,22 @@ export async function DELETE(_req: Request, context: any) {
 
   try {
     if (process.env.MONGODB_URI) {
-      await connectMongo();
-      const { default: Volunteer } = await import("@/models/Volunteer");
-      const res = await Volunteer.deleteOne({ _id: id });
-      if (res.deletedCount === 0) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
-      return NextResponse.json({ ok: true });
+      try {
+        const tenantSlug = _req.headers.get('x-tenant-slug') || undefined;
+        let Volunteer: any;
+        try {
+          Volunteer = await getModelForTenant("@/models/Volunteer", "Volunteer", tenantSlug);
+        } catch (e) {
+          await connectMongo();
+          const mod = await import("@/models/Volunteer");
+          Volunteer = mod.default;
+        }
+        const res = await Volunteer.deleteOne({ _id: id });
+        if (res.deletedCount === 0) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+        return NextResponse.json({ ok: true });
+      } catch (e: any) {
+        return NextResponse.json({ error: "Error eliminando" }, { status: 500 });
+      }
     } else {
       const info = db.prepare("DELETE FROM volunteers WHERE id = ?").run(id);
       if (info.changes === 0) return NextResponse.json({ error: "No encontrado" }, { status: 404 });

@@ -12,6 +12,16 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // extraer tenant del query si existe
+  const [tenant, setTenant] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const t = sp.get("tenant");
+      if (t) setTenant(t);
+    } catch {}
+  }, []);
+
   // Si ya está autenticado, redirigir al dashboard
   useEffect(() => {
     if (status === "authenticated") router.replace("/dashboard");
@@ -24,9 +34,10 @@ export default function SignInPage() {
     const res = await signIn("credentials", {
       email,
       password,
+      tenant: tenant || undefined,
       redirect: false,
       callbackUrl: "/dashboard",
-    });
+    } as any);
     if (res?.ok) {
       router.replace(res.url || "/dashboard");
     } else {

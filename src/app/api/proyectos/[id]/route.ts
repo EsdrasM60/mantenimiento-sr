@@ -1,10 +1,28 @@
 import { NextResponse } from "next/server";
 import { connectMongo } from "@/lib/mongo";
-import Project from "@/models/Project";
+import { getTenantBySlug, connectTenantDb } from "@/lib/tenant";
+import ProjectModel from "@/models/Project";
 
 export async function PATCH(req: Request, context: any) {
   try {
-    await connectMongo();
+    // intentar tenant desde header
+    const tenantSlug = req.headers.get('x-tenant-slug');
+    let Project: any = ProjectModel;
+
+    if (tenantSlug) {
+      const tenant = await getTenantBySlug(tenantSlug);
+      if (tenant) {
+        const conn = await connectTenantDb(tenant as any);
+        const m = await import("@/models/Project");
+        Project = conn.model('Project', (m.default as any).schema);
+      }
+    }
+
+    if (!Project) {
+      await connectMongo();
+      Project = ProjectModel;
+    }
+
     const { params } = context as { params: { id: string } };
     const { id } = params;
     const body = await req.json().catch(() => ({}));
@@ -68,7 +86,24 @@ export async function PATCH(req: Request, context: any) {
 
 export async function DELETE(_req: Request, context: any) {
   try {
-    await connectMongo();
+    // intentar tenant desde header
+    const tenantSlug = _req.headers.get('x-tenant-slug');
+    let Project: any = ProjectModel;
+
+    if (tenantSlug) {
+      const tenant = await getTenantBySlug(tenantSlug);
+      if (tenant) {
+        const conn = await connectTenantDb(tenant as any);
+        const m = await import("@/models/Project");
+        Project = conn.model('Project', (m.default as any).schema);
+      }
+    }
+
+    if (!Project) {
+      await connectMongo();
+      Project = ProjectModel;
+    }
+
     const { params } = context as { params: { id: string } };
     const { id } = params;
     const res = await Project.deleteOne({ _id: id });
@@ -82,7 +117,24 @@ export async function DELETE(_req: Request, context: any) {
 // Nuevo: obtener proyecto por id (con evidencias)
 export async function GET(_req: Request, context: any) {
   try {
-    await connectMongo();
+    // intentar tenant desde header
+    const tenantSlug = _req.headers.get('x-tenant-slug');
+    let Project: any = ProjectModel;
+
+    if (tenantSlug) {
+      const tenant = await getTenantBySlug(tenantSlug);
+      if (tenant) {
+        const conn = await connectTenantDb(tenant as any);
+        const m = await import("@/models/Project");
+        Project = conn.model('Project', (m.default as any).schema);
+      }
+    }
+
+    if (!Project) {
+      await connectMongo();
+      Project = ProjectModel;
+    }
+
     const { params } = context as { params: { id: string } };
     const { id } = params;
     const doc = await Project.findById(id).lean();

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getGridFSBucket } from "@/lib/gridfs";
+import { getGridFSBucket, getGridFSBucketForTenant } from "@/lib/gridfs";
 import { Readable } from "stream";
 import sharp from "sharp";
 
@@ -24,8 +24,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Solo se permiten imágenes" }, { status: 415 });
   }
 
-  const bucket = await getGridFSBucket("uploads");
-  const bucketThumb = await getGridFSBucket("uploads_thumb");
+  // leer tenant desde header (middleware lo establece)
+  const tenantSlug = req.headers.get('x-tenant-slug') || undefined;
+
+  const bucket = tenantSlug ? await getGridFSBucketForTenant("uploads", tenantSlug) : await getGridFSBucket("uploads");
+  const bucketThumb = tenantSlug ? await getGridFSBucketForTenant("uploads_thumb", tenantSlug) : await getGridFSBucket("uploads_thumb");
 
   // Leer todo el archivo en buffer para procesar con sharp
   const web = file.stream();
@@ -44,6 +47,7 @@ export async function POST(req: Request) {
     userEmail: session.user?.email || undefined,
     userName: session.user?.name || undefined,
     originalName: filename,
+    tenant: tenantSlug || undefined,
   } as Record<string, any>;
 
   // Optimizar original (limitar a 2560px, comprimir)
@@ -59,7 +63,7 @@ export async function POST(req: Request) {
   });
 
   // Guardar miniatura
-  const write = bucketThumb.openUploadStream(filename, { contentType: "image/jpeg", metadata: { ...metadata, thumbOf: String(uploadStream.id) } });
+  const write = bucketThumb.openUploadStream(filename, { contentType: "image/jpeg", metadata: { ...metadata, thumbOf: String(uploadStream.id), tenant: tenantSlug || undefined } });
   await new Promise<void>((resolve, reject) => {
     Readable.from(thumbBuf).on("error", reject).pipe(write).on("error", reject).on("finish", () => resolve());
   });

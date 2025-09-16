@@ -4,6 +4,7 @@ import { authOptions, role as RoleEnum } from "@/lib/auth";
 import { db } from "@/lib/sqlite";
 import { connectMongo } from "@/lib/mongo";
 import nodemailer from "nodemailer";
+import { getModelForTenant } from "@/lib/tenant";
 
 function splitName(full: string) {
   const parts = String(full || "").trim().split(/\s+/).filter(Boolean);
@@ -32,8 +33,16 @@ export async function POST(_req: Request, context: any) {
 
   try {
     if (process.env.MONGODB_URI) {
-      await connectMongo();
-      const { default: User } = await import("@/models/User");
+      const tenantSlug = _req.headers.get('x-tenant-slug') || undefined;
+      let User: any;
+      try {
+        User = await getModelForTenant("@/models/User", "User", tenantSlug);
+      } catch (e) {
+        await connectMongo();
+        const mod = await import("@/models/User");
+        User = mod.default;
+      }
+
       const user = await User.findById(id);
       if (!user) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
 
@@ -42,7 +51,13 @@ export async function POST(_req: Request, context: any) {
 
       // Crear voluntario si no existe
       try {
-        const { default: Volunteer } = await import("@/models/Volunteer");
+        let Volunteer: any;
+        try {
+          Volunteer = await getModelForTenant("@/models/Volunteer", "Volunteer", tenantSlug);
+        } catch (e) {
+          const modV = await import("@/models/Volunteer");
+          Volunteer = modV.default;
+        }
         const exists = await Volunteer.findOne({ email: user.email }).lean();
         if (!exists) {
           const { nombre, apellido } = splitName(user.name || user.email || "");
