@@ -1,47 +1,49 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+async function fetchItems() {
+  const res = await fetch(`/api/actividad/suministros?page=1&pageSize=1000`);
+  if (!res.ok) return [];
+  const json = await res.json();
+  return json.items || [];
+}
 
 export default function SuministrosPage() {
-  const [items, setItems] = useState<{
-    id: string;
-    nombre: string;
-    proveedor?: string;
-    idArticulo?: string;
-    costo?: number;
-    cantidadComprada: number;
-    cantidadExistencia: number;
-  }[]>([]);
-
+  const [items, setItems] = useState<any[]>([]);
   const [nombre, setNombre] = useState("");
   const [proveedor, setProveedor] = useState("");
   const [idArticulo, setIdArticulo] = useState("");
   const [costo, setCosto] = useState<number | "">("");
   const [cantidadComprada, setCantidadComprada] = useState<number>(1);
   const [cantidadExistencia, setCantidadExistencia] = useState<number | "">("");
+  const [loading, setLoading] = useState(false);
 
-  function addItem(e: React.FormEvent) {
+  useEffect(() => { fetchItems().then((it) => setItems(it)); }, []);
+
+  async function addItem(e: React.FormEvent) {
     e.preventDefault();
     if (!nombre) return;
-    const costoNum = costo === "" ? undefined : Number(costo);
-    const existencia = cantidadExistencia === "" ? cantidadComprada : Number(cantidadExistencia);
-    setItems((s) => [
-      ...s,
-      {
-        id: String(Date.now()),
-        nombre,
-        proveedor: proveedor || undefined,
-        idArticulo: idArticulo || undefined,
-        costo: costoNum,
-        cantidadComprada: Number(cantidadComprada),
-        cantidadExistencia: Number(existencia),
-      },
-    ]);
-    setNombre("");
-    setProveedor("");
-    setIdArticulo("");
-    setCosto("");
-    setCantidadComprada(1);
-    setCantidadExistencia("");
+    setLoading(true);
+    const payload = {
+      nombre,
+      proveedor: proveedor || undefined,
+      idArticulo: idArticulo || undefined,
+      costo: costo === "" ? undefined : Number(costo),
+      cantidadComprada: Number(cantidadComprada),
+      cantidadExistencia: cantidadExistencia === "" ? undefined : Number(cantidadExistencia),
+    };
+    const res = await fetch(`/api/actividad/suministros`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+    setLoading(false);
+    if (!res.ok) return;
+    const json = await res.json();
+    setItems((s) => [json, ...s]);
+    setNombre(""); setProveedor(""); setIdArticulo(""); setCosto(""); setCantidadComprada(1); setCantidadExistencia("");
+  }
+
+  async function removeItem(id: string) {
+    const res = await fetch(`/api/actividad/suministros?id=${id}`, { method: "DELETE" });
+    if (!res.ok) return;
+    setItems((s) => s.filter((x) => x._id !== id));
   }
 
   return (
@@ -79,7 +81,7 @@ export default function SuministrosPage() {
         </div>
 
         <div className="sm:col-span-3">
-          <button className="btn btn-primary">Agregar</button>
+          <button className="btn btn-primary" disabled={loading}>{loading?"Guardando...":"Agregar"}</button>
         </div>
       </form>
 
@@ -89,7 +91,7 @@ export default function SuministrosPage() {
         ) : (
           <ul className="space-y-2">
             {items.map((it) => (
-              <li key={it.id} className="p-3 border rounded">
+              <li key={it._id} className="p-3 border rounded">
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="font-medium text-lg">{it.nombre} {it.idArticulo ? <span className="text-sm text-[color:var(--muted)]">· {it.idArticulo}</span> : null}</div>
@@ -101,7 +103,7 @@ export default function SuministrosPage() {
                   </div>
                 </div>
                 <div className="mt-2 flex items-center justify-end">
-                  <button className="btn btn-ghost" onClick={() => setItems((s) => s.filter((x) => x.id !== it.id))}>Eliminar</button>
+                  <button className="btn btn-ghost" onClick={() => removeItem(it._id)}>Eliminar</button>
                 </div>
               </li>
             ))}
