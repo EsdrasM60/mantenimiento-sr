@@ -14,6 +14,11 @@ export default function ActividadPage() {
           <div className="font-semibold">🛠️ Registro de Mantenimiento y Reparaciones</div>
           <div className="text-sm text-[color:var(--muted)] mt-2">Registro de órdenes de trabajo, reparaciones y acciones de mantenimiento.</div>
         </a>
+
+        <a href="/actividad/suministros/reporte" className="card p-4 hover:shadow-lg transition">
+          <div className="font-semibold">📈 Reporte de Suministros</div>
+          <div className="text-sm text-[color:var(--muted)] mt-2">Genera reportes por rango de fechas y exporta CSV.</div>
+        </a>
       </div>
     </section>
   );
