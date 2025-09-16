@@ -41,7 +41,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       <aside
         id="app-sidebar"
         className={
-          "fixed z-[1001] top-0 left-0 h-screen w-72 sm:w-80 bg-[color:var(--surface)] border-r border-[color:var(--border)] shadow-xl transform transition-transform " +
+          "sidebar fixed z-[1001] top-0 left-0 h-screen w-72 sm:w-80 bg-[color:var(--surface)] border-r border-[color:var(--border)] shadow-xl transform transition-transform " +
           (open ? "translate-x-0" : "-translate-x-full")
         }
         aria-label="Sidebar"
