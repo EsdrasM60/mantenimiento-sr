@@ -9,8 +9,20 @@ export async function GET(req: Request) {
   const pageSize = Math.min(parseInt(searchParams.get("pageSize") || "1000"), 1000);
   const skip = (page - 1) * pageSize;
 
-  const items = await Suministro.find({}).sort({ createdAt: -1 }).skip(skip).limit(pageSize).lean();
-  const total = await Suministro.countDocuments();
+  const from = searchParams.get("from");
+  const to = searchParams.get("to");
+  const match: any = {};
+  if (from) {
+    const d = new Date(from);
+    if (!isNaN(d.getTime())) match.fecha = { ...(match.fecha || {}), $gte: d };
+  }
+  if (to) {
+    const d = new Date(to);
+    if (!isNaN(d.getTime())) match.fecha = { ...(match.fecha || {}), $lt: d };
+  }
+
+  const items = await Suministro.find(match).sort({ fecha: -1 }).skip(skip).limit(pageSize).lean();
+  const total = await Suministro.countDocuments(match);
   return NextResponse.json({ items, total, page, pageSize });
 }
 
@@ -27,6 +39,7 @@ export async function POST(req: Request) {
     costo: body.costo ? Number(body.costo) : undefined,
     cantidadComprada: Number(body.cantidadComprada || 0),
     cantidadExistencia: typeof body.cantidadExistencia !== "undefined" ? Number(body.cantidadExistencia) : Number(body.cantidadComprada || 0),
+    fecha: body.fecha ? new Date(body.fecha) : new Date(),
   });
   return NextResponse.json(s);
 }

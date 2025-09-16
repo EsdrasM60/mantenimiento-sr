@@ -8,11 +8,13 @@ const SuministroSchema = new Schema(
     costo: { type: Number },
     cantidadComprada: { type: Number, required: true, default: 0 },
     cantidadExistencia: { type: Number, required: true, default: 0 },
+    fecha: { type: Date, required: true, default: () => new Date() },
     created_by: { type: String },
   },
   { timestamps: true }
 );
 
 SuministroSchema.index({ nombre: 1 });
+SuministroSchema.index({ fecha: -1 });
 
 export default (mongoose.models.Suministro as mongoose.Model<any>) || mongoose.model("Suministro", SuministroSchema);

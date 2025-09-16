@@ -16,6 +16,7 @@ export default function SuministrosPage() {
   const [costo, setCosto] = useState<number | "">("");
   const [cantidadComprada, setCantidadComprada] = useState<number>(1);
   const [cantidadExistencia, setCantidadExistencia] = useState<number | "">("");
+  const [fecha, setFecha] = useState<string>(new Date().toISOString().slice(0,10));
   const [loading, setLoading] = useState(false);
 
   useEffect(() => { fetchItems().then((it) => setItems(it)); }, []);
@@ -31,6 +32,7 @@ export default function SuministrosPage() {
       costo: costo === "" ? undefined : Number(costo),
       cantidadComprada: Number(cantidadComprada),
       cantidadExistencia: cantidadExistencia === "" ? undefined : Number(cantidadExistencia),
+      fecha: fecha || undefined,
     };
     const res = await fetch(`/api/actividad/suministros`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
     setLoading(false);
@@ -80,6 +82,11 @@ export default function SuministrosPage() {
           <input type="number" min={0} value={cantidadExistencia} onChange={(e) => setCantidadExistencia(e.target.value === "" ? "" : Number(e.target.value))} className="input w-36" placeholder="(por defecto = comprada)" />
         </div>
 
+        <div>
+          <label className="text-sm block mb-1">Fecha (movimiento)</label>
+          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className="input" />
+        </div>
+
         <div className="sm:col-span-3">
           <button className="btn btn-primary" disabled={loading}>{loading?"Guardando...":"Agregar"}</button>
         </div>
@@ -95,21 +102,21 @@ export default function SuministrosPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="font-medium text-lg">{it.nombre} {it.idArticulo ? <span className="text-sm text-[color:var(--muted)]">· {it.idArticulo}</span> : null}</div>
-                    <div className="text-sm text-[color:var(--muted)]">Proveedor: {it.proveedor || "-"}</div>
+                    <div className="text-sm text-[color:var(--muted)]">Proveedor: {it.proveedor || "-"} · {it.fecha ? new Date(it.fecha).toLocaleDateString() : "-"}</div>
                   </div>
                   <div className="text-right">
                     <div className="font-semibold">RD$ {it.costo?.toFixed ? it.costo.toFixed(2) : (it.costo ?? "-")}</div>
                     <div className="text-sm text-[color:var(--muted)]">En existencia: {it.cantidadExistencia}</div>
-                  </div>
-                </div>
-                <div className="mt-2 flex items-center justify-end">
-                  <button className="btn btn-ghost" onClick={() => removeItem(it._id)}>Eliminar</button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </section>
-  );
+                 </div>
+               </div>
+               <div className="mt-2 flex items-center justify-end">
+                 <button className="btn btn-ghost" onClick={() => removeItem(it._id)}>Eliminar</button>
+               </div>
+             </li>
+           ))}
+         </ul>
+       )}
+     </div>
+   </section>
+ );
 }
