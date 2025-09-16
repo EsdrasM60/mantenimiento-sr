@@ -435,12 +435,12 @@ export default function TareasPage() {
 
       {/* Image viewer modal */}
       {viewImage && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70" onClick={() => setViewImage(null)} />
-          <div className="relative z-70 max-w-[95vw] max-h-[95vh]">
-            <button className="absolute top-2 right-2 z-80 btn btn-ghost" onClick={() => setViewImage(null)} aria-label="Cerrar imagen">Cerrar</button>
+          <div className="relative z-50 max-w-[95vw] max-h-[95vh] flex items-center justify-center">
+            <button className="absolute top-2 right-2 btn btn-ghost" onClick={() => setViewImage(null)} aria-label="Cerrar imagen">Cerrar</button>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`/api/images/${viewImage}`} alt="imagen" className="max-w-[95vw] max-h-[95vh] object-contain rounded" />
+            <img src={`/api/images/${viewImage}`} alt="imagen" className="max-w-[95vw] max-h-[95vh] w-auto h-auto object-contain rounded" />
           </div>
         </div>
       )}
