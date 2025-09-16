@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import ClientErrorBoundary from "@/components/ClientErrorBoundary";
 
 async function fetchItems() {
   const res = await fetch(`/api/actividad/suministros?page=1&pageSize=1000`);
@@ -58,6 +59,7 @@ export default function SuministrosPage() {
   }
 
   return (
+    <ClientErrorBoundary>
     <section className="space-y-4">
       <div className="flex items-center justify-between">
         <button type="button" className="btn btn-ghost" onClick={() => router.back()} aria-label="Regresar">
@@ -198,5 +200,6 @@ export default function SuministrosPage() {
         </div>
       )}
     </section>
+    </ClientErrorBoundary>
   );
 }
