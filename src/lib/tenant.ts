@@ -1,10 +1,12 @@
 import { NextRequest } from "next/server";
 import Tenant, { TTenant } from "@/models/Tenant";
-import NodeCache from "node-cache";
 import mongoose from "mongoose";
 import { connectMongo } from "@/lib/mongo";
 
-const cache = new NodeCache({ stdTTL: 60 * 5, checkperiod: 120 });
+// Small in-memory cache to avoid adding node-cache as a dependency for builds.
+const CACHE_TTL_MS = 60 * 5 * 1000; // 5 minutes
+type CacheEntry = { value: TTenant; expiresAt: number };
+const cache = new Map<string, CacheEntry>();
 
 export function slugFromHostOrPath(req: NextRequest): string | null {
   try {
@@ -24,12 +26,12 @@ export function slugFromHostOrPath(req: NextRequest): string | null {
 
 export async function getTenantBySlug(slug: string): Promise<TTenant | null> {
   const key = `tenant:${slug}`;
-  const cached = cache.get<TTenant>(key);
-  if (cached) return cached;
+  const cached = cache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
   await ensureGlobalConnection();
   const t = await Tenant.findOne({ slug }).lean();
   if (!t) return null;
-  cache.set(key, t as TTenant);
+  cache.set(key, { value: t as TTenant, expiresAt: Date.now() + CACHE_TTL_MS });
   return t as TTenant;
 }
 
