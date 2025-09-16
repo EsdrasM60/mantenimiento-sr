@@ -134,3 +134,71 @@ body {
   button, a, input, select, textarea { min-height: 40px; }
   .input, .select, .textarea, .btn { font-size: 15px; }
 }
+
+/* Mobile-specific adjustments when DeviceAdapt detects a mobile device */
+html.is-mobile {
+  /* make content occupy more horizontal space */
+  font-size: 15px;
+}
+
+html.is-mobile body {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+html.is-mobile .app-bg {
+  background-size: auto, 16px 16px, 16px 16px;
+}
+
+html.is-mobile .max-w-7xl {
+  max-width: 100% !important;
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+}
+
+/* Cards and spacing */
+html.is-mobile .card {
+  border-radius: 12px;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  box-shadow: 0 6px 18px -10px #00000080;
+}
+
+html.is-mobile .card-header {
+  padding: 0.5rem 0.5rem;
+}
+
+/* Navbar and controls compact */
+html.is-mobile .navbar,
+html.is-mobile .nav {
+  padding: 0.5rem 0.75rem;
+}
+
+html.is-mobile .btn {
+  padding: 0.6rem 0.8rem;
+  font-size: 15px;
+}
+
+/* Headings smaller on mobile */
+html.is-mobile .type-heading-04,
+html.is-mobile .type-heading-05 {
+  font-size: 20px;
+}
+
+/* Sidebar: hide on mobile to maximize space (if present) */
+html.is-mobile .sidebar {
+  display: none !important;
+}
+
+/* Make main content full width when sidebar hidden */
+html.is-mobile main {
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Improve tap targets already covered by media query, keep in case DeviceAdapt doesn't trigger */
+@media (max-width: 640px) {
+  html.is-mobile button, html.is-mobile a, html.is-mobile input, html.is-mobile select, html.is-mobile textarea { min-height: 44px; }
+}
+
+/* End mobile tweaks */

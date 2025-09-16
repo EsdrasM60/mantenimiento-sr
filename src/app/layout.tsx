@@ -4,6 +4,8 @@ import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Providers } from "@/components/Providers";
 import { auth } from "@/lib/auth";
+import DeviceAdapt from '@/components/DeviceAdapt';
+import BackButton from '@/components/BackButton';
 
 export const viewport = {
   width: "device-width",
@@ -33,10 +35,14 @@ export default async function RootLayout({
   return (
     <html lang="es">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <DeviceAdapt />
         <div className="app-bg min-h-screen">
           <Providers session={session}>
             {session ? <Navbar /> : null}
-            <main className="mx-auto max-w-7xl px-3 sm:px-6 py-4 sm:py-8">{children}</main>
+            <main className="mx-auto max-w-7xl px-3 sm:px-6 py-4 sm:py-8">
+              <BackButton />
+              {children}
+            </main>
           </Providers>
         </div>
       </body>

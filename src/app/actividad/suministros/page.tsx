@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 async function fetchItems() {
   const res = await fetch(`/api/actividad/suministros?page=1&pageSize=1000`);
@@ -9,6 +10,7 @@ async function fetchItems() {
 }
 
 export default function SuministrosPage() {
+  const router = useRouter();
   const [items, setItems] = useState<any[]>([]);
   const [nombre, setNombre] = useState("");
   const [proveedor, setProveedor] = useState("");
@@ -50,41 +52,48 @@ export default function SuministrosPage() {
 
   return (
     <section className="space-y-4">
-      <h1 className="text-2xl font-bold">Lista de Suministros</h1>
+      <div className="flex items-center justify-between">
+        <button type="button" className="btn btn-ghost" onClick={() => router.back()} aria-label="Regresar">
+          ← Volver
+        </button>
+        <h1 className="text-2xl font-bold">Lista de Suministros</h1>
+        <div />
+      </div>
+
       <form onSubmit={addItem} className="grid gap-3 sm:grid-cols-3 items-end">
         <div>
           <label className="text-sm block mb-1">Nombre</label>
-          <input value={nombre} onChange={(e) => setNombre(e.target.value)} className="input" required />
+          <input value={nombre} onChange={(e) => setNombre(e.target.value)} className="input" required placeholder="Nombre del suministro" title="Nombre del suministro" />
         </div>
 
         <div>
           <label className="text-sm block mb-1">Proveedor</label>
-          <input value={proveedor} onChange={(e) => setProveedor(e.target.value)} className="input" />
+          <input value={proveedor} onChange={(e) => setProveedor(e.target.value)} className="input" placeholder="Proveedor (opcional)" title="Proveedor" />
         </div>
 
         <div>
           <label className="text-sm block mb-1">ID artículo (opcional)</label>
-          <input value={idArticulo} onChange={(e) => setIdArticulo(e.target.value)} className="input" />
+          <input value={idArticulo} onChange={(e) => setIdArticulo(e.target.value)} className="input" placeholder="ID del artículo (opcional)" title="ID del artículo" />
         </div>
 
         <div>
           <label className="text-sm block mb-1">Costo (RD$)</label>
-          <input type="number" step="0.01" value={costo} onChange={(e) => setCosto(e.target.value === "" ? "" : Number(e.target.value))} className="input" />
+          <input type="number" step="0.01" value={costo} onChange={(e) => setCosto(e.target.value === "" ? "" : Number(e.target.value))} className="input" placeholder="Costo en RD$" title="Costo en RD$" />
         </div>
 
         <div>
           <label className="text-sm block mb-1">Cantidad comprada</label>
-          <input type="number" min={1} value={cantidadComprada} onChange={(e) => setCantidadComprada(parseInt(e.target.value || "1"))} className="input w-36" />
+          <input type="number" min={1} value={cantidadComprada} onChange={(e) => setCantidadComprada(parseInt(e.target.value || "1"))} className="input w-36" placeholder="Cantidad comprada" title="Cantidad comprada" />
         </div>
 
         <div>
           <label className="text-sm block mb-1">Cantidad en existencia</label>
-          <input type="number" min={0} value={cantidadExistencia} onChange={(e) => setCantidadExistencia(e.target.value === "" ? "" : Number(e.target.value))} className="input w-36" placeholder="(por defecto = comprada)" />
+          <input type="number" min={0} value={cantidadExistencia} onChange={(e) => setCantidadExistencia(e.target.value === "" ? "" : Number(e.target.value))} className="input w-36" placeholder="Cantidad en existencia (por defecto = comprada)" title="Cantidad en existencia" />
         </div>
 
         <div>
           <label className="text-sm block mb-1">Fecha (movimiento)</label>
-          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className="input" />
+          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className="input" title="Fecha del movimiento" />
         </div>
 
         <div className="sm:col-span-3">
