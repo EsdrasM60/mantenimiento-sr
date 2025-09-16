@@ -14,6 +14,17 @@ export default class ClientErrorBoundary extends React.Component<Props, { error:
     // eslint-disable-next-line no-console
     console.error("ClientErrorBoundary caught:", error, info);
     this.setState({ error, info: info.componentStack });
+
+    // Send to server debug endpoint (best-effort, don't block)
+    try {
+      fetch('/api/debug/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: error.message, stack: info.componentStack, url: typeof window !== 'undefined' ? window.location.href : null }),
+      }).catch(() => {});
+    } catch (e) {
+      // ignore
+    }
   }
 
   render() {
