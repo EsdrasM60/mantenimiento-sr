@@ -212,17 +212,30 @@ export default function TareasPage() {
                           </div>
                           <div className="flex items-center gap-2 ml-2">
                             {hasAdj && (
-                              <a
-                                href={`/api/tareas/fichas/file/${(p as any).fichaId.pdfId}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                title="Ver adjunto de la ficha"
-                                className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded border bg-[color:var(--surface)] hover:bg-white/5"
-                              >
-                                <PaperClipIcon className="w-4 h-4" />
-                                Adjunto
-                              </a>
+                              <>
+                                <a
+                                  href={`/api/tareas/fichas/file/${(p as any).fichaId.pdfId}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  title="Ver adjunto de la ficha"
+                                  className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded border bg-[color:var(--surface)] hover:bg-white/5"
+                                >
+                                  <PaperClipIcon className="w-4 h-4" />
+                                  Adjunto
+                                </a>
+
+                                {/* Nuevo: botón explícito para ver la ficha sin editar */}
+                                <a
+                                  href={`/api/tareas/fichas/file/${(p as any).fichaId.pdfId}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="ml-2 inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded border bg-[color:var(--surface)] hover:bg-white/5"
+                                >
+                                  Ver ficha
+                                </a>
+                              </>
                             )}
                             <span className={`badge ${isDone ? "badge-success" : "badge-warning"}`}>
                               {isDone ? "Completo" : "Pendiente"}
@@ -305,7 +318,7 @@ export default function TareasPage() {
                   <div className="flex flex-wrap gap-2 mb-2">
                     {createFotos.map((id) => (
                       <div key={id} className="relative w-20 h-20 border rounded overflow-hidden bg-[color:var(--surface-2)]">
-                        <img src={`/api/images/${id}`} alt="foto" className="w-full h-full object-cover" />
+                        <img src={`/api/images/${id}?thumb=1`} alt="foto" className="w-full h-full object-cover" />
                         <button type="button" className="absolute top-0 right-0 bg-black/60 text-white text-xs px-1" onClick={() => removeCreateFoto(id)}>x</button>
                       </div>
                     ))}
@@ -390,7 +403,7 @@ export default function TareasPage() {
                     {editFotos.map((id) => (
                       <div key={id} className="relative w-20 h-20 border rounded overflow-hidden">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`/api/images/${id}`} alt="foto" className="w-full h-full object-cover" />
+                        <img src={`/api/images/${id}?thumb=1`} alt="foto" className="w-full h-full object-cover" />
                         <button type="button" className="absolute top-0 right-0 bg-black/60 text-white text-xs px-1" onClick={() => removeEditFoto(id)}>x</button>
                       </div>
                     ))}
