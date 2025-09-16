@@ -440,7 +440,12 @@ export default function TareasPage() {
           <div className="relative z-50 max-w-[95vw] max-h-[95vh] flex items-center justify-center">
             <button className="absolute top-2 right-2 btn btn-ghost" onClick={() => setViewImage(null)} aria-label="Cerrar imagen">Cerrar</button>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`/api/images/${viewImage}`} alt="imagen" className="max-w-[95vw] max-h-[95vh] w-auto h-auto object-contain rounded" />
+            <img
+              src={`/api/images/${viewImage}?thumb=1`}
+              alt="imagen"
+              className="max-w-[95vw] max-h-[95vh] w-auto h-auto object-contain rounded"
+              onError={() => setViewImage(null)}
+            />
           </div>
         </div>
       )}
