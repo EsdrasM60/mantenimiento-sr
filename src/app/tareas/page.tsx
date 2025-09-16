@@ -78,6 +78,12 @@ export default function TareasPage() {
   const [currentFicha, setCurrentFicha] = useState<Ficha | null>(null);
   const [saving, setSaving] = useState(false);
   const [createFotos, setCreateFotos] = useState<string[]>([]);
+  const [viewImage, setViewImage] = useState<string | null>(null);
+
+  function openImage(id: string, e?: React.MouseEvent) {
+    if (e) e.stopPropagation();
+    setViewImage(id);
+  }
 
   async function uploadImage(file: File): Promise<string | null> {
     const fd = new FormData();
@@ -254,7 +260,7 @@ export default function TareasPage() {
                             <div className="mt-2 flex flex-wrap gap-2">
                               {(p as any).fotos.slice(0,6).map((id: string) => (
                                 <div key={id} className="w-12 h-12 border rounded overflow-hidden bg-[color:var(--surface-2)]">
-                                  <img src={`/api/images/${id}?thumb=1`} alt="foto" className="w-full h-full object-cover" />
+                                  <img src={`/api/images/${id}?thumb=1`} alt="foto" className="w-full h-full object-cover cursor-pointer" onClick={(e)=>openImage(id, e)} />
                                 </div>
                               ))}
                             </div>
@@ -318,7 +324,7 @@ export default function TareasPage() {
                   <div className="flex flex-wrap gap-2 mb-2">
                     {createFotos.map((id) => (
                       <div key={id} className="relative w-20 h-20 border rounded overflow-hidden bg-[color:var(--surface-2)]">
-                        <img src={`/api/images/${id}?thumb=1`} alt="foto" className="w-full h-full object-cover" />
+                        <img src={`/api/images/${id}?thumb=1`} alt="foto" className="w-full h-full object-cover cursor-pointer" onClick={(e)=>openImage(id, e)} />
                         <button type="button" className="absolute top-0 right-0 bg-black/60 text-white text-xs px-1" onClick={() => removeCreateFoto(id)}>x</button>
                       </div>
                     ))}
@@ -403,7 +409,7 @@ export default function TareasPage() {
                     {editFotos.map((id) => (
                       <div key={id} className="relative w-20 h-20 border rounded overflow-hidden">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`/api/images/${id}?thumb=1`} alt="foto" className="w-full h-full object-cover" />
+                        <img src={`/api/images/${id}?thumb=1`} alt="foto" className="w-full h-full object-cover cursor-pointer" onClick={(e)=>openImage(id, e)} />
                         <button type="button" className="absolute top-0 right-0 bg-black/60 text-white text-xs px-1" onClick={() => removeEditFoto(id)}>x</button>
                       </div>
                     ))}
@@ -423,6 +429,18 @@ export default function TareasPage() {
                 </div>
               </form>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image viewer modal */}
+      {viewImage && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setViewImage(null)} />
+          <div className="relative z-70 max-w-[95vw] max-h-[95vh]">
+            <button className="absolute top-2 right-2 z-80 btn btn-ghost" onClick={() => setViewImage(null)} aria-label="Cerrar imagen">Cerrar</button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/api/images/${viewImage}`} alt="imagen" className="max-w-[95vw] max-h-[95vh] object-contain rounded" />
           </div>
         </div>
       )}
