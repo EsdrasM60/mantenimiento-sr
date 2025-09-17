@@ -104,44 +104,51 @@ export default function SuministrosPage() {
         ) : (
           <ul className="space-y-2">
             {useMemo(() => {
-              const f = items.filter((it) => {
-                if (filterName && !(String(it.nombre || "").toLowerCase().includes(filterName.toLowerCase()))) return false;
-                if (filterProveedor && !(String(it.proveedor || "").toLowerCase().includes(filterProveedor.toLowerCase()))) return false;
-                if (filterFrom) {
-                  const d = new Date(it.fecha || it.createdAt || null);
-                  const fromD = new Date(filterFrom);
-                  if (isNaN(d.getTime()) || d < fromD) return false;
-                }
-                if (filterTo) {
-                  const d = new Date(it.fecha || it.createdAt || null);
-                  const toD = new Date(filterTo);
-                  toD.setDate(toD.getDate() + 1);
-                  if (isNaN(d.getTime()) || d >= toD) return false;
-                }
-                return true;
-              }).sort((a,b) => {
-                const da = new Date(a.fecha || a.createdAt || 0).getTime();
-                const db = new Date(b.fecha || b.createdAt || 0).getTime();
-                return sortDir === 'desc' ? db - da : da - db;
-              });
-              return f.map((it) => (
-                <li key={it._id} className="p-3 border rounded">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="font-medium text-lg">{it.nombre} {it.idArticulo ? <span className="text-sm text-[color:var(--muted)]">· {it.idArticulo}</span> : null}</div>
-                      <div className="text-sm text-[color:var(--muted)]">Proveedor: {it.proveedor || "-"} · {it.fecha ? new Date(it.fecha).toLocaleDateString() : "-"}</div>
-                      <div className="text-sm mt-2">Cantidad comprada: {it.cantidadComprada} · En existencia: {it.cantidadExistencia}</div>
-                      {it.costo ? <div className="text-sm mt-1">Costo: RD$ {typeof it.costo === 'number' ? it.costo.toFixed(2) : it.costo}</div> : null}
+              try {
+                const f = items.filter((it) => {
+                  if (filterName && !(String(it.nombre || "").toLowerCase().includes(filterName.toLowerCase()))) return false;
+                  if (filterProveedor && !(String(it.proveedor || "").toLowerCase().includes(filterProveedor.toLowerCase()))) return false;
+                  if (filterFrom) {
+                    const d = new Date(it.fecha || it.createdAt || null);
+                    const fromD = new Date(filterFrom);
+                    if (isNaN(d.getTime()) || d < fromD) return false;
+                  }
+                  if (filterTo) {
+                    const d = new Date(it.fecha || it.createdAt || null);
+                    const toD = new Date(filterTo);
+                    toD.setDate(toD.getDate() + 1);
+                    if (isNaN(d.getTime()) || d >= toD) return false;
+                  }
+                  return true;
+                }).sort((a,b) => {
+                  const da = new Date(a.fecha || a.createdAt || 0).getTime();
+                  const db = new Date(b.fecha || b.createdAt || 0).getTime();
+                  return sortDir === 'desc' ? db - da : da - db;
+                });
+                return f.map((it) => (
+                  <li key={it._id} className="p-3 border rounded">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="font-medium text-lg">{it.nombre} {it.idArticulo ? <span className="text-sm text-[color:var(--muted)]">· {it.idArticulo}</span> : null}</div>
+                        <div className="text-sm text-[color:var(--muted)]">Proveedor: {it.proveedor || "-"} · {it.fecha ? new Date(it.fecha).toLocaleDateString() : "-"}</div>
+                        <div className="text-sm mt-2">Cantidad comprada: {it.cantidadComprada} · En existencia: {it.cantidadExistencia}</div>
+                        {it.costo ? <div className="text-sm mt-1">Costo: RD$ {typeof it.costo === 'number' ? it.costo.toFixed(2) : it.costo}</div> : null}
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm text-[color:var(--muted)]">Creado: {it.createdAt ? new Date(it.createdAt).toLocaleString() : ''}</div>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm text-[color:var(--muted)]">Creado: {it.createdAt ? new Date(it.createdAt).toLocaleString() : ''}</div>
+                    <div className="mt-2 flex items-center justify-end">
+                      <button className="btn btn-ghost" onClick={() => removeItem(it._id)}>Eliminar</button>
                     </div>
-                  </div>
-                  <div className="mt-2 flex items-center justify-end">
-                    <button className="btn btn-ghost" onClick={() => removeItem(it._id)}>Eliminar</button>
-                  </div>
-                </li>
-              ));
+                  </li>
+                ));
+              } catch (err) {
+                // Log and return safe fallback to avoid crashing client in production
+                // eslint-disable-next-line no-console
+                console.error('Suministros render error:', err);
+                return [<li key="suministros-error" className="p-3 border rounded text-red-600">Error al mostrar suministros.</li>];
+              }
             }, [items, filterName, filterProveedor, filterFrom, filterTo, sortDir])}
           </ul>
         )}
