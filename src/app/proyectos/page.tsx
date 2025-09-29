@@ -17,14 +17,22 @@ const fetcher = async (url: string) => {
 type Evidencia = { mediaId: string; thumbId?: string; titulo?: string; puntos: string[] };
 
 // Extender tipo con asignaciones
-type Project = { _id: string; titulo: string; descripcion?: string; estado: string; fechaInicio?: string | null; fechaFin?: string | null; evidencias?: Evidencia[]; voluntarioId?: string | null; ayudanteId?: string | null; checklist?: Array<{ text: string; done: boolean }>; etiquetas?: string[] };
+type Project = { _id: string; titulo: string; descripcion?: string; estado: string; fechaInicio?: string | null; fechaFin?: string | null; evidencias?: Evidencia[]; voluntarioId?: string | null; ayudanteId?: string | null; checklist?: Array<{ text: string; done: boolean }>; etiquetas?: string[]; notes?: Array<{ text: string; author?: string; createdAt?: string | Date }> };
 
 type Volunteer = { _id?: string; id?: string; nombre: string; apellido: string };
 
 export default function ProyectosPage() {
-  const { data, mutate } = useSWR<{ items: Project[] }>("/api/proyectos?page=1&pageSize=100", fetcher);
-  const { data: voluntariosResp } = useSWR<any>("/api/voluntarios", fetcher);
+  // mover estados de filtros antes de construir la key SWR
   const [q, setQ] = useState("");
+  const [hideCompleted, setHideCompleted] = useState(false);
+  const [estadoFilter, setEstadoFilter] = useState<string>("");
+
+  // construir key incluyendo estado y q para filtrar server-side
+  const pageSize = 100;
+  const apiKey = `/api/proyectos?page=1&pageSize=${pageSize}` + (estadoFilter ? `&estado=${encodeURIComponent(estadoFilter)}` : "") + (q ? `&q=${encodeURIComponent(q)}` : "");
+  const { data, mutate } = useSWR<{ items: Project[] }>(apiKey, fetcher);
+
+  const { data: voluntariosResp } = useSWR<any>("/api/voluntarios", fetcher);
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<Project | null>(null);
   const [view, setView] = useState<Project | null>(null);
@@ -48,17 +56,19 @@ export default function ProyectosPage() {
     return m;
   }, [voluntarios]);
 
-  // NUEVO: lista filtrada para búsqueda
+  // NUEVO: lista filtrada para búsqueda, estado y ocultar completados
   const visibles = useMemo(() => {
     const query = q.trim().toLowerCase();
     return (proyectos || []).filter((p) => {
+      if (hideCompleted && p.estado === "COMPLETADO") return false;
+      if (estadoFilter && p.estado !== estadoFilter) return false;
       if (!query) return true;
       return (
         (p.titulo || "").toLowerCase().includes(query) ||
         (p.descripcion || "").toLowerCase().includes(query)
       );
     });
-  }, [proyectos, q]);
+  }, [proyectos, q, hideCompleted, estadoFilter]);
 
   // NUEVO: utilidades para formato y progreso
   function fmtDate(d?: string | null) {
@@ -327,15 +337,38 @@ export default function ProyectosPage() {
     ] as const;
   }
 
+  // Nuevo: add note function
+  async function addNoteToProject(id: string, text: string) {
+    if (!text || !text.trim()) return;
+    const body = { addNote: text.trim() };
+    const res = await fetch(`/api/proyectos/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    if (!res.ok) { const msg = await res.text().catch(()=>""); throw new Error(msg || `Error ${res.status}`); }
+    await mutate();
+  }
+
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Proyectos</h1>
         <button className="btn btn-primary" title="Nuevo proyecto" onClick={() => setOpen(true)}>Nuevo</button>
       </div>
-      <div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
         <input className="w-full input" placeholder="Buscar proyectos..." value={q} onChange={(e)=>setQ(e.target.value)} />
+        <div className="flex items-center gap-3 mt-2 sm:mt-0">
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={hideCompleted} onChange={(e)=>setHideCompleted(e.currentTarget.checked)} />
+            <span className="text-sm">Ocultar completados</span>
+          </label>
+          <select className="select" value={estadoFilter} onChange={(e)=>setEstadoFilter(e.currentTarget.value)}>
+            <option value="">Filtrar por estado</option>
+            <option value="PLANIFICADO">Sin empezar</option>
+            <option value="EN_PROGRESO">En curso</option>
+            <option value="EN_PAUSA">En pausa</option>
+            <option value="COMPLETADO">Completado</option>
+          </select>
+        </div>
       </div>
+
       {visibles.length === 0 ? (
         <div className="text-sm text-[color:var(--muted)]">Sin proyectos.</div>
       ) : (
@@ -586,6 +619,40 @@ export default function ProyectosPage() {
                   </div>
                 </div>
 
+                {/* Notas de seguimiento */}
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">Notas de seguimiento</div>
+                  <div className="space-y-2">
+                    {Array.isArray(edit?.notes) && edit.notes.length > 0 ? (
+                      <div className="space-y-1">
+                        {edit.notes.map((n, i) => (
+                          <div key={i} className="border rounded p-2 text-sm">
+                            <div className="text-xs text-[color:var(--muted)]">{n.author || "Desconocido"} — {new Date(n.createdAt || Date.now()).toLocaleString()}</div>
+                            <div className="mt-1">{n.text}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-[color:var(--muted)]">No hay notas.</div>
+                    )}
+                    <div className="flex gap-2">
+                      <textarea id="newNoteText" placeholder="Agregar nota de seguimiento" className="flex-1 textarea" />
+                      <button type="button" className="btn btn-primary" onClick={async () => {
+                        const ta = document.getElementById("newNoteText") as HTMLTextAreaElement | null;
+                        if (!ta) return;
+                        const text = ta.value.trim();
+                        if (!text) return;
+                        try {
+                          await addNoteToProject(edit._id, text);
+                          ta.value = "";
+                          // actualizar estado local para mostrar nota inmediatamente
+                          setEdit(prev => prev ? ({ ...prev, notes: [...(prev.notes || []), { text, author: "Yo", createdAt: new Date() }] }) : prev);
+                        } catch (err:any) { alert(`No se pudo agregar nota: ${err?.message||err}`); }
+                      }}>Agregar</button>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="text-right">
                   <button type="submit" className="btn btn-primary">Guardar</button>
                 </div>
@@ -640,6 +707,24 @@ export default function ProyectosPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Notas */}
+                <div>
+                  <div className="font-medium">Notas de seguimiento</div>
+                  <div className="space-y-2 mt-2">
+                    {Array.isArray(viewData.notes) && viewData.notes.length > 0 ? (
+                      viewData.notes.map((n, i) => (
+                        <div key={i} className="border rounded p-2 text-sm">
+                          <div className="text-xs text-[color:var(--muted)]">{n.author || "Desconocido"} — {new Date(n.createdAt || Date.now()).toLocaleString()}</div>
+                          <div className="mt-1">{n.text}</div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-sm text-[color:var(--muted)]">Sin notas.</div>
+                    )}
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>

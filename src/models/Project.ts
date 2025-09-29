@@ -21,6 +21,16 @@ const ChecklistItemSchema = new Schema(
   { _id: false }
 );
 
+// NUEVO: subesquema para notas de seguimiento
+const NoteSchema = new Schema(
+  {
+    text: { type: String, required: true },
+    author: { type: String, required: false },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
 const ProjectSchema = new Schema(
   {
     titulo: { type: String, required: true, index: true },
@@ -34,6 +44,8 @@ const ProjectSchema = new Schema(
     evidencias: { type: [EvidenciaSchema], default: [] },
     // Cambiado: lista de verificación con estado por ítem
     checklist: { type: [ChecklistItemSchema], default: [] },
+    // NUEVO: notas de seguimiento
+    notes: { type: [NoteSchema], default: [] },
     created_by: { type: String },
   },
   { timestamps: true }

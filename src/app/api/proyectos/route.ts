@@ -9,14 +9,26 @@ export async function GET(req: Request) {
   const pageSize = Math.min(parseInt(searchParams.get("pageSize") || "20"), 200);
   const skip = (page - 1) * pageSize;
 
-  const items = await Project.find({})
+  // Nuevo: soporte de filtrado por estado y búsqueda 'q'
+  const estado = (searchParams.get("estado") || "").trim();
+  const q = (searchParams.get("q") || "").trim();
+
+  const filter: any = {};
+  if (estado) filter.estado = estado;
+  if (q) {
+    // búsqueda simple en título y descripción (case-insensitive)
+    const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    filter.$or = [{ titulo: re }, { descripcion: re }];
+  }
+
+  const items = await Project.find(filter)
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(pageSize)
     .select({ titulo: 1, descripcion: 1, estado: 1, voluntarioId: 1, ayudanteId: 1, fechaInicio: 1, fechaFin: 1, checklist: 1, evidencias: 1 })
     .lean();
 
-  const total = await Project.countDocuments({});
+  const total = await Project.countDocuments(filter);
   return NextResponse.json({ items, total, page, pageSize });
 }
 

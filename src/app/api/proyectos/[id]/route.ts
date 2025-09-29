@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectMongo } from "@/lib/mongo";
 import Project from "@/models/Project";
+import { auth } from "@/lib/auth";
 
 export async function PATCH(req: Request, context: any) {
   try {
@@ -36,6 +37,21 @@ export async function PATCH(req: Request, context: any) {
       ).lean();
       if (!doc) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
       return NextResponse.json(doc);
+    }
+
+    // NUEVO: añadir nota
+    if (typeof body.addNote === "string" && body.addNote.trim().length > 0) {
+      // obtener sesión para guardar autor
+      try {
+        const session = await auth();
+        const author = session?.user?.name || session?.user?.email || "Desconocido";
+        const note = { text: body.addNote.trim(), author, createdAt: new Date() };
+        const doc = await Project.findByIdAndUpdate(id, { $push: { notes: note } }, { new: true }).lean();
+        if (!doc) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+        return NextResponse.json(doc);
+      } catch (err) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
     }
 
     const updates: any = {};
