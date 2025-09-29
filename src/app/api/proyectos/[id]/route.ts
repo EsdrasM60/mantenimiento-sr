@@ -41,17 +41,23 @@ export async function PATCH(req: Request, context: any) {
 
     // NUEVO: añadir nota
     if (typeof body.addNote === "string" && body.addNote.trim().length > 0) {
-      // obtener sesión para guardar autor
+      // intentar obtener sesión para guardar autor, pero no bloquear si falla
+      let author = "Desconocido";
       try {
         const session = await auth();
-        const author = session?.user?.name || session?.user?.email || "Desconocido";
-        const note = { text: body.addNote.trim(), author, createdAt: new Date() };
-        const doc = await Project.findByIdAndUpdate(id, { $push: { notes: note } }, { new: true }).lean();
-        if (!doc) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
-        return NextResponse.json(doc);
+        if (session && session.user) author = session.user.name || session.user.email || author;
       } catch (err) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        // no autorizados siguen pudiendo añadir nota con autor por defecto
       }
+
+      const note = { text: body.addNote.trim(), author, createdAt: new Date() };
+      const doc = await Project.findByIdAndUpdate(
+        id,
+        { $push: { notes: note } },
+        { new: true }
+      ).lean();
+      if (!doc) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+      return NextResponse.json(doc);
     }
 
     const updates: any = {};
